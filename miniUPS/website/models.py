@@ -1,14 +1,10 @@
-from enum import unique
-from msilib import sequence
-from tkinter import CASCADE
 from django.db import models
-from django.forms import CharField, EmailField, IntegerField
 
 # Create your models here.
 class User(models.Model):
-    name = models.CharField(primary_key = True)
+    name = models.CharField(primary_key = True, max_length=128)
     email = models.EmailField(blank=False, unique=True)
-    password = models.CharField(blank=False)
+    password = models.CharField(blank=False, max_length=128)
     
 class Truck(models.Model):
     status_options = {
@@ -21,7 +17,7 @@ class Truck(models.Model):
     truckid = models.AutoField(primary_key = True)
     x = models.IntegerField(blank=False)
     y = models.IntegerField(blank=False)
-    status = models.CharField(blank=False, choices=status_options)
+    status = models.CharField(blank=False, choices=status_options, max_length=128)
     
 class Package(models.Model):
     status_options = {
@@ -38,13 +34,13 @@ class Package(models.Model):
     y = models.IntegerField(blank=False)
     user = models.ForeignKey(to=User, verbose_name="FK_binded_user", 
                              on_delete=models.SET_NULL, default=None, blank=True, null=True) #user could be null
-    status = models.CharField(blank=False, choices=status_options)
+    status = models.CharField(blank=False, choices=status_options, max_length=128)
     
 # record trucks on the way to warehouse(truck status = traveling)
 class AssignedTruck(models.Model):
     whid = models.IntegerField(primary_key=True)
     truckid = models.ForeignKey(to=Truck, verbose_name="FK_truck", 
-                                on_delete=CASCADE, default=None, blank=False, null=False)
+                                on_delete=models.CASCADE, default=None, blank=False, null=False)
     
 # handled response from world
 # when we receive a response from world, check if the seqnum exists in this table
