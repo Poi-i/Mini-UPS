@@ -25,7 +25,16 @@ SECRET_KEY = 'django-insecure-68n3743#bxo045!87msjm#ognh=+6-w-s4cnd92@g_zoxx-*_#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["vcm-25953.vm.duke.edu", "vcm-26474.vm.duke.edu", "127.0.0.1"]
+CSRF_TRUSTED_ORIGINS =[
+    'http://vcm-25953.vm.duke.edu',
+    'http://vcm-25953.vm.duke.edu:8000',
+    'http://vcm-26474.vm.duke.edu',
+    'http://vcm-26474.vm.duke.edu:8000',
+    'http://localhost',
+    'http://localhost:8000',
+    'http://localhost:8001'
+]
 
 
 # Application definition
@@ -37,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'website',
 ]
 
 MIDDLEWARE = [
