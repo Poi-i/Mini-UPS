@@ -8,8 +8,7 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
@@ -24,13 +23,15 @@ class Migration(migrations.Migration):
                 ('truckid', models.AutoField(primary_key=True, serialize=False)),
                 ('x', models.IntegerField()),
                 ('y', models.IntegerField()),
-                ('status', models.CharField(choices=[('traveling', 'traveling'), ('idle', 'idle'), ('arrive warehouse', 'arrive warehouse'), ('delivering', 'delivering'), ('loading', 'loading')], max_length=128)),
+                ('status', models.CharField(choices=[('traveling', 'traveling'), ('idle', 'idle'), (
+                    'arrive warehouse', 'arrive warehouse'), ('delivering', 'delivering'), ('loading', 'loading')], max_length=128)),
             ],
         ),
         migrations.CreateModel(
             name='User',
             fields=[
-                ('name', models.CharField(max_length=128, primary_key=True, serialize=False)),
+                ('name', models.CharField(max_length=128,
+                 primary_key=True, serialize=False)),
                 ('email', models.EmailField(max_length=254, unique=True)),
                 ('password', models.CharField(max_length=128)),
             ],
@@ -44,20 +45,25 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Package',
             fields=[
-                ('tracking_id', models.IntegerField(primary_key=True, serialize=False)),
+                ('tracking_id', models.IntegerField(
+                    primary_key=True, serialize=False)),
                 ('shipment_id', models.IntegerField()),
                 ('x', models.IntegerField()),
                 ('y', models.IntegerField()),
-                ('status', models.CharField(choices=[('loading', 'loading'), ('loaded', 'loaded'), ('delivering', 'delivering'), ('delivered', 'delivered')], max_length=128)),
-                ('truckid', models.ForeignKey(default=None, on_delete=django.db.models.deletion.CASCADE, to='website.truck', verbose_name='FK_truck')),
-                ('user', models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='website.user', verbose_name='FK_binded_user')),
+                ('status', models.CharField(choices=[('loading', 'loading'), ('loaded', 'loaded'), (
+                    'delivering', 'delivering'), ('delivered', 'delivered')], max_length=128)),
+                ('truckid', models.ForeignKey(default=None, on_delete=django.db.models.deletion.CASCADE,
+                 to='website.truck', verbose_name='FK_truck')),
+                ('user', models.ForeignKey(blank=True, default=None, null=True,
+                 on_delete=django.db.models.deletion.SET_NULL, to='website.user', verbose_name='FK_binded_user')),
             ],
         ),
         migrations.CreateModel(
             name='AssignedTruck',
             fields=[
                 ('whid', models.IntegerField(primary_key=True, serialize=False)),
-                ('truckid', models.ForeignKey(default=None, on_delete=django.db.models.deletion.CASCADE, to='website.truck', verbose_name='FK_truck')),
+                ('truckid', models.ForeignKey(default=None, on_delete=django.db.models.deletion.CASCADE,
+                 to='website.truck', verbose_name='FK_truck')),
             ],
         ),
     ]
