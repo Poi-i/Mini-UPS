@@ -1,5 +1,8 @@
 from django.db import models
 
+# Do we need add a field which is world_id to differentiate different tests?
+# same shipment id but at diff warehouse
+
 # Create your models here.
 class User(models.Model):
     name = models.CharField(primary_key = True, max_length=128)
