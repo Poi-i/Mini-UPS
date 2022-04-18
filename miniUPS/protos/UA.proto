@@ -67,5 +67,4 @@ message AUmessage{
     optional APacPickup pickup = 1;
     optional ASendAllLoaded all_loaded = 2;
     optional ABindUpsUser bind_upsuser = 3;
-
 }
