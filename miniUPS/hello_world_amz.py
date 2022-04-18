@@ -25,18 +25,17 @@ def get_world_id_from_input():
     # ask user to reconnect or create a new world
     return None
 
+def dock_amz(socket_to_world, socket_to_amz):
+    procs_pools = ProcessPoolExecutor(20)
+    while True:
+        au_msg = pigeon.recv_from_amz(socket_to_amz)
+        procs_pools.submit(pigeon.handle_amz, au_msg, socket_to_world, socket_to_amz)
 
 def dock_world(socket_to_world, socket_to_amz):
     procs_pools = ProcessPoolExecutor(20)
     while True:
-        au_msg = pigeon.recv_from_amz(socket_to_amz)
-        procs_pools.submit(_, au_msg, socket_to_world, socket_to_amz)
-
-def dock_amz(socket_to_world, socket_to_amz):
-    procs_pools = ProcessPoolExecutor(20)
-    while True:
         u_resp = pigeon.recv_from_world(socket_to_world)
-        procs_pools.submit(_, u_resp, socket_to_world, socket_to_amz)
+        procs_pools.submit(pigeon.handle_world, u_resp, socket_to_world, socket_to_amz)
 
 
 def main():

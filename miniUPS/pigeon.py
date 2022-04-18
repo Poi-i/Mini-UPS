@@ -85,3 +85,9 @@ def reconnect_to_word(world_id, to_world_socket) -> bool:
     if uconnected.result == "connected!":
         return True
     return False
+
+
+def handle_world(u_rsp, socket_to_world, socket_to_amz):
+    return
+def handle_amz(au_msg, socket_to_world, socket_to_amz):
+    return
