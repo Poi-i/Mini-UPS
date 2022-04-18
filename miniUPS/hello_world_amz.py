@@ -1,7 +1,7 @@
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import Process
 import socket
 import pigeon
-from protos import world_ups_pb2 as World_UPS
-
 
 def get_socket_to_amz():
     ups_host = '127.0.0.1'
@@ -26,6 +26,19 @@ def get_world_id_from_input():
     return None
 
 
+def dock_world(socket_to_world, socket_to_amz):
+    procs_pools = ProcessPoolExecutor(20)
+    while True:
+        au_msg = pigeon.recv_from_amz(socket_to_amz)
+        procs_pools.submit(_, au_msg, socket_to_world, socket_to_amz)
+
+def dock_amz(socket_to_world, socket_to_amz):
+    procs_pools = ProcessPoolExecutor(20)
+    while True:
+        u_resp = pigeon.recv_from_world(socket_to_world)
+        procs_pools.submit(_, u_resp, socket_to_world, socket_to_amz)
+
+
 def main():
     world_id = get_world_id_from_input()
     socket_to_world = get_socket_to_world()
@@ -35,12 +48,20 @@ def main():
 
     # send the world_id to amz
 
+    # start one process to dock amz
+    p_to_amz = Process(target=dock_amz, args=(socket_to_world, socket_to_amz))
+    p_to_amz.start()
+
     # start one process to dock world
     p_to_world = Process(target=dock_world, args=(
         socket_to_world, socket_to_amz))
-    # start one process to dock amz
-    p_to_amz = Process(target=dock_amz, args=(socket_to_world, socket_to_amz))
+    p_to_world.start()
+    
 
+    p_to_world.join()
+    p_to_amz.join()
+    socket_to_world.close()
+    socket_to_amz.close()
 
 if __name__ == "__main__":
     main()
