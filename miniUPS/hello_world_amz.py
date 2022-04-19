@@ -17,6 +17,7 @@ executer = ThreadPoolExecutor(50)
 lock = threading.Lock()
 seq_num = 0
 
+
 def get_socket_to_amz():
     ups_host = '127.0.0.1'
     ip_port_amz = (ups_host, 8888)
@@ -42,6 +43,7 @@ def get_seqnum() -> int:
     seq_num += 1
     lock.release()
     return to_ret
+
 
 def get_world_id_from_input():
     # ask user to reconnect or create a new world
@@ -131,7 +133,7 @@ def connect_to_word(truck_num, socket_to_world) -> bool:
         truck_to_add.x = i
         truck_to_add.y = i
     msg.isAmazon = False
-    write_msg(socket_to_world, msg) # no need for repeat
+    write_msg(socket_to_world, msg)  # no need for repeat
     uconnected = World_UPS.UConnected()
     uconnected.ParseFromString(recv_msg(socket_to_world))
     print("world id: " + str(uconnected.worldid))
@@ -436,10 +438,24 @@ def handle_amz(au_msg: UA.AUmessage, socket_to_world, socket_to_amz):
         handle_amz_bindups(au_msg.bind_upsuser, socket_to_world, socket_to_amz)
     return
 
+
+'''
+send worldid to Amazon
+@send: 
+    USendWorldId: worldid
+'''
+
+
+def a_worldid(socket_to_amz, worldid):
+    world_id = PBwrapper.send_WorldId(worldid)
+    write_to_amz(socket_to_amz, UA.UAmessage().world_id.CopyFrom(world_id))
+    return
+
+
 def main():
     socket_to_world = get_socket_to_world()
     socket_to_amz = get_socket_to_amz()
-    
+
     # send connect/reconnect to world
     world_id = None
     retry = 5
@@ -448,20 +464,22 @@ def main():
         world_id, is_connected = connect_to_word(truck_num, socket_to_world)
         while retry and not is_connected:
             print("Connect to world failed, retrying...")
-            world_id, is_connected = connect_to_word(truck_num, socket_to_world)
+            world_id, is_connected = connect_to_word(
+                truck_num, socket_to_world)
             retry -= 1
     elif sys.argv[0] == 'reconnect':
         world_id = int(sys.argv[1])
         world_id, is_connected = reconnect_to_word(world_id, socket_to_world)
         while retry and not is_connected:
             print("Connect to world failed, retrying...")
-            world_id, is_connected = reconnect_to_word(world_id, socket_to_world)
+            world_id, is_connected = reconnect_to_word(
+                world_id, socket_to_world)
             retry -= 1
     else:
         print("Please check your input: " + sys.argv + "\n")
 
     # send the world_id to amz
-    
+    a_worldid(socket_to_amz, world_id)
     # start one thread to dock amz
     t_to_amz = Thread(target=dock_amz, args=(socket_to_world, socket_to_amz))
     t_to_amz.start()
