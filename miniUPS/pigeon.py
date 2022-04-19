@@ -125,6 +125,9 @@ def handle_world_send_ack(u_rsp, socket_to_world):
         # synchronized out?
         write_to_world(socket_to_world, u_commands)
 
+"""
+Handle UFinished
+"""
 
 def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
     truck_id_ = u_finished.truckid
@@ -144,6 +147,11 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
     write_to_amz(socket_to_amz, ua_msg)
 
 
+def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
+    print(u_delivery_made)
+    package_id = u_delivery_made.package_id
+    # update package status
+    
 
 def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
     print("recv from world: " + str(u_rsp))
@@ -159,6 +167,7 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
     for u_delivery_made in u_rsp.delivered:
         # renew truck's status
         # renew package's status -> delivered
+        handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz)
         pass
     
     for ack_ in u_rsp.acks:
