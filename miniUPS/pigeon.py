@@ -1,5 +1,6 @@
 from google.protobuf.internal.decoder import _DecodeVarint32
 from google.protobuf.internal.encoder import _EncodeVarint
+from requests import request
 from protos import world_ups_pb2 as World_UPS
 from protos import UA_pb2 as UA
 import PBwrapper
@@ -8,7 +9,11 @@ import website.models as md
 communication tool to Amazon and World
 '''
 
-# Helper function for writing, write msg to socket_
+request_map = {}  # [seqnum of our request to world] -> [timer]
+
+"""
+Helper function for writing, write msg to socket_
+"""
 
 
 def write_msg(socket_, msg):
@@ -92,6 +97,7 @@ def reconnect_to_word(world_id, to_world_socket) -> bool:
 send ack back to each item in UResponses structs
 """
 
+
 def handle_world_send_ack(u_rsp, socket_to_world):
     seqnum_list = []
     for u_finished in u_rsp.completions:
@@ -103,62 +109,62 @@ def handle_world_send_ack(u_rsp, socket_to_world):
         print("before u_delivery_made: " + seqnum_list + "\n")
         seqnum_list.append(u_delivery_made.seqnum)
         print("after u_delivery_made: " + seqnum_list + "\n")
-    
+
     for ack_ in u_rsp.acks:
         print("before ack_: " + seqnum_list + "\n")
         seqnum_list.append(ack_.seqnum)
         print("after ack_: " + seqnum_list + "\n")
-    
+
     for trcuk_status in u_rsp.truckstatus:
         print("before trcuk_status: " + seqnum_list + "\n")
         seqnum_list.append(trcuk_status.seqnum)
         print("after trcuk_status: " + seqnum_list + "\n")
-    
+
     for err_ in u_rsp.error:
         print("before err_: " + seqnum_list + "\n")
         seqnum_list.append(err_.seqnum)
         print("after err_: " + seqnum_list + "\n")
-    
+
     if seqnum_list:
         u_commands = World_UPS.UCommands()
         u_commands.acks.extend(seqnum_list)
         # synchronized out?
         write_to_world(socket_to_world, u_commands)
 
+
 """
 Handle UFinished
 """
 
+
 def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
     truck_id_ = u_finished.truckid
-    print("World tells truck[" + str(truck_id_) + "]" + " arrived at warehouse" + "\n")
+    print("World tells truck[" + str(truck_id_) +
+          "]" + " arrived at warehouse" + "\n")
     truck_status = u_finished.status
     print("truck[" + str(truck_id_) + "]'s status: " + truck_status + "\n")
+    if truck_status == "ARRIVE WAREHOUSE":
+        # tell amz truck has arrived
+        ua_msg = UA.UAmessage()
+        ua_msg.UsendArrive.truck_id = truck_id_
+        print("send to amz: " + ua_msg + "\n")
+        # lock on socket?
+        write_to_amz(socket_to_amz, ua_msg)
     # renew truck's status
     # lock on row?
     truck = md.Truck.objects.get(truckid=truck_id_)
     truck.status = truck_status
     truck.save()
-    # tell amz truck has arrived
-    ua_msg = UA.UAmessage()
-    ua_msg.UsendArrive.truck_id = truck_id_
-    print("send to amz: " + ua_msg + "\n")
-    # lock on socket?
-    write_to_amz(socket_to_amz, ua_msg)
 
 
 def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
     print(u_delivery_made)
     package_id = u_delivery_made.packageid
-    truck_id = u_delivery_made.truckid
 
     # update package status
     package = md.Package.objects.get(shipment_id=package_id)
     package.status = "delivered"
     package.save()
-
-    # renew truck status
-    # check if there is still packages exit for the truck to deliever
 
     # tell amz package delievered
     ua_msg = UA.UAmessage()
@@ -167,8 +173,10 @@ def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
     # lock on socket?
     write_to_amz(socket_to_amz, ua_msg)
 
+
 def handle_world_truck_status(truck_status, socket_to_world, socket_to_amz):
     return
+
 
 def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
     print("recv from world: " + str(u_rsp))
@@ -179,33 +187,36 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
         # renew truck's status
         # tell amz truck has arrived
         handle_world_finished(u_finished, socket_to_world, socket_to_amz)
-        pass
-    
+
     for u_delivery_made in u_rsp.delivered:
         # renew truck's status
         # renew package's status -> delivered
-        handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz)
-        pass
-    
+        handle_world_delievered(
+            u_delivery_made, socket_to_world, socket_to_amz)
+
     for ack_ in u_rsp.acks:
         # terminate the request from our side, where ack = seqnum of our req
-        pass
-    
+        if ack_ in request_map:
+            request_map[ack_].cancel()
+            del request_map[ack_]
+
     for truck_status in u_rsp.truckstatus:
         handle_world_truck_status(truck_status, socket_to_world, socket_to_amz)
-        pass
-    
+
     for err_ in u_rsp.error:
         print(err_)
-    
-    if u_rsp.HasField("finished") and u_rsp.finished: # close connection
-        pass
+
+    if u_rsp.HasField("finished") and u_rsp.finished:  # close connection
+        print("disconnect successfully")
 
     return
+
 
 '''
  handle Amazon request "APacPickup"
 '''
+
+
 def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
     return
 
@@ -213,12 +224,17 @@ def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
 '''
  handle Amazon request "ASendAllLoaded"
 '''
-def handle_amz_bindups(bind_upsuser: UA.ABindUpsUser, socket_to_world, socket_to_amz):
+
+
+def handle_amz_all_loaded(bind_upsuser: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
     return
+
 
 '''
  handle Amazon request "APacPickup"
 '''
+
+
 def handle_amz_bindups(pickup: UA.ABindUpsUser, socket_to_world, socket_to_amz):
     return
 
@@ -228,7 +244,8 @@ def handle_amz(au_msg: UA.AUmessage, socket_to_world, socket_to_amz):
     if au_msg.HasField("pickup"):
         handle_amz_pickup(au_msg.pickup, socket_to_world, socket_to_amz)
     if au_msg.HasField("all_loaded"):
-        handle_amz_all_loaded(au_msg.all_loaded, socket_to_world, socket_to_amz)
+        handle_amz_all_loaded(
+            au_msg.all_loaded, socket_to_world, socket_to_amz)
     if au_msg.HasField("bind_upsuser"):
         handle_amz_bindups(au_msg.bind_upsuser, socket_to_world, socket_to_amz)
     return
