@@ -149,9 +149,26 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
 
 def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
     print(u_delivery_made)
-    package_id = u_delivery_made.package_id
+    package_id = u_delivery_made.packageid
+    truck_id = u_delivery_made.truckid
+
     # update package status
-    
+    package = md.Package.objects.get(shipment_id=package_id)
+    package.status = "delivered"
+    package.save()
+
+    # renew truck status
+    # check if there is still packages exit for the truck to deliever
+
+    # tell amz package delievered
+    ua_msg = UA.UAmessage()
+    ua_msg.UPacDelivered.shipment_id = package_id
+    print("send to amz: " + ua_msg + "\n")
+    # lock on socket?
+    write_to_amz(socket_to_amz, ua_msg)
+
+def handle_world_truck_status(truck_status, socket_to_world, socket_to_amz):
+    return
 
 def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
     print("recv from world: " + str(u_rsp))
@@ -174,7 +191,8 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
         # terminate the request from our side, where ack = seqnum of our req
         pass
     
-    for trcuk_status in u_rsp.truckstatus:
+    for truck_status in u_rsp.truckstatus:
+        handle_world_truck_status(truck_status, socket_to_world, socket_to_amz)
         pass
     
     for err_ in u_rsp.error:
