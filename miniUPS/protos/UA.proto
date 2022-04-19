@@ -8,7 +8,9 @@ message USendWorldId{
 message APacPickup{
     required int32 whid = 1; 
     required int64 shipment_id = 2; 
-    optional string ups_username = 3; 
+    optional string ups_username = 3;
+    required int32 x = 4;
+    required int32 y = 5;
 }
 
 message UPacPickupRes{
