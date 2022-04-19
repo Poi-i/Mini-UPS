@@ -1,4 +1,3 @@
-from struct import pack
 from time import sleep
 from google.protobuf.internal.decoder import _DecodeVarint32
 from google.protobuf.internal.encoder import _EncodeVarint
@@ -14,6 +13,7 @@ communication tool to Amazon and World
 '''
 
 request_map = {}  # [seqnum of our request to world] -> [timer]
+seq_num = 0
 
 """
 Helper function for writing, write msg to socket_
@@ -81,8 +81,8 @@ def connect_to_word(truck_num, to_world_socket) -> bool:
     for i in range(truck_num):
         truck_to_add = msg.trucks.add()
         truck_to_add.id = i
-        truck_to_add.x = 0
-        truck_to_add.y = 0
+        truck_to_add.x = i
+        truck_to_add.y = i
     msg.isAmazon = False
     write_to_world(to_world_socket, msg)
     uconnected = World_UPS.UConnected()
