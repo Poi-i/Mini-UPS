@@ -28,6 +28,7 @@ class Truck(models.Model):
     y = models.IntegerField(blank=False)
     status = models.CharField(
         blank=False, choices=status_options, max_length=128)
+    pac_num = models.IntegerField(null=False, default=0)
 
     def __str__(self):
         return "truckid = " + str(self.truckid) + " status = " + self.status

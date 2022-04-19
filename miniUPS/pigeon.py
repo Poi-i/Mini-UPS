@@ -227,9 +227,9 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
 
 def pick_truck():
     while True:
-        # sort the result sorted from IDLE to DELIVERING, pick the 1st one
+        # sort the result sorted from IDLE to DELIVERING, pac_num from low to high, pick the 1st one
         truck = md.Truck.objects.filter(Q(status='IDLE') | Q(
-            status='DELIVERING')).order_by('-status').first()
+            status='DELIVERING')).order_by('-status').order_by('pac_num').first()
         if truck != None:
             print("the picked truck is:" + truck)
             return truck.truckid
@@ -336,6 +336,8 @@ def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
 def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
     # parse ASendAllLoaded, insert into db: Package
     pac_list = []
+    truck = md.Truck.objects.get(truckid=all_loaded.truckid)
+    newpac_num = truck.pac_num
     for package in all_loaded.packages:
         ship_id = package.shipment_id
         track_id = md.Package.objects.filter(
@@ -345,9 +347,15 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
             item = md.Item.objects.create(
                 id=item.id, description=item.description, count=item.count, tracking_id=track_id)
             print("insert item: " + item)
+        newpac_num += 1
         pac_list.append(PBwrapper.gene_package(ship_id, package.x, package.y))
 
-    global seqnum  # TODO: atomically increase seqnum += 1
+    # update pac_num of this truck
+    truck.pac_num = newpac_num
+    truck.save()
+    print("truck after loaded: " + truck)
+    # TODO: atomically increase seqnum += 1
+    global seqnum
     # send Ucommands(UGoDeliver) to World
     go_deliver = PBwrapper.go_deliver(all_loaded.truck_id, pac_list, seqnum)
     write_to_world(socket_to_world,
