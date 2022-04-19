@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='',
   syntax='proto2',
   serialized_options=None,
-  serialized_pb=_b('\n\x08UA.proto\" \n\x0cUSendWorldId\x12\x10\n\x08world_id\x18\x01 \x02(\x03\"E\n\nAPacPickup\x12\x0c\n\x04whid\x18\x01 \x02(\x05\x12\x13\n\x0bshipment_id\x18\x02 \x02(\x03\x12\x14\n\x0cups_username\x18\x03 \x01(\t\"^\n\rUPacPickupRes\x12\x13\n\x0btracking_id\x18\x01 \x02(\x03\x12\x11\n\tis_binded\x18\x02 \x01(\x08\x12\x13\n\x0bshipment_id\x18\x03 \x02(\x03\x12\x10\n\x08truck_id\x18\x04 \x02(\x05\"\x1f\n\x0bUsendArrive\x12\x10\n\x08truck_id\x18\x01 \x02(\x05\".\n\x08\x41Product\x12\x13\n\x0b\x64\x65scription\x18\x01 \x02(\t\x12\r\n\x05\x63ount\x18\x02 \x02(\x05\"N\n\x08\x41Package\x12\t\n\x01x\x18\x01 \x02(\x05\x12\t\n\x01y\x18\x02 \x02(\x05\x12\x13\n\x0bshipment_id\x18\x03 \x02(\x03\x12\x17\n\x04item\x18\x04 \x03(\x0b\x32\t.AProduct\"?\n\x0e\x41SendAllLoaded\x12\x1b\n\x08packages\x18\x01 \x03(\x0b\x32\t.APackage\x12\x10\n\x08truck_id\x18\x02 \x02(\x05\"$\n\rUPacDelivered\x12\x13\n\x0bshipment_id\x18\x01 \x02(\x03\"9\n\x0c\x41\x42indUpsUser\x12\x13\n\x0bshipment_id\x18\x01 \x02(\x03\x12\x14\n\x0cups_username\x18\x02 \x02(\t\"2\n\x08UBindRes\x12\x13\n\x0bshipment_id\x18\x01 \x02(\x03\x12\x11\n\tis_binded\x18\x02 \x02(\x08\"%\n\x0eUResendPackage\x12\x13\n\x0bshipment_id\x18\x01 \x02(\x03\"\xe0\x01\n\tUAmessage\x12\x1f\n\x08world_id\x18\x01 \x01(\x0b\x32\r.USendWorldId\x12\"\n\npickup_res\x18\x02 \x01(\x0b\x32\x0e.UPacPickupRes\x12!\n\x0bsend_arrive\x18\x03 \x01(\x0b\x32\x0c.UsendArrive\x12%\n\rpac_delivered\x18\x04 \x01(\x0b\x32\x0e.UPacDelivered\x12\x1b\n\x08\x62ind_res\x18\x05 \x01(\x0b\x32\t.UBindRes\x12\'\n\x0eresend_package\x18\x06 \x01(\x0b\x32\x0f.UResendPackage\"r\n\tAUmessage\x12\x1b\n\x06pickup\x18\x01 \x01(\x0b\x32\x0b.APacPickup\x12#\n\nall_loaded\x18\x02 \x01(\x0b\x32\x0f.ASendAllLoaded\x12#\n\x0c\x62ind_upsuser\x18\x03 \x01(\x0b\x32\r.ABindUpsUser')
+  serialized_pb=_b('\n\x08UA.proto\" \n\x0cUSendWorldId\x12\x10\n\x08world_id\x18\x01 \x02(\x03\"[\n\nAPacPickup\x12\x0c\n\x04whid\x18\x01 \x02(\x05\x12\x13\n\x0bshipment_id\x18\x02 \x02(\x03\x12\x14\n\x0cups_username\x18\x03 \x01(\t\x12\t\n\x01x\x18\x04 \x02(\x05\x12\t\n\x01y\x18\x05 \x02(\x05\"^\n\rUPacPickupRes\x12\x13\n\x0btracking_id\x18\x01 \x02(\x03\x12\x11\n\tis_binded\x18\x02 \x01(\x08\x12\x13\n\x0bshipment_id\x18\x03 \x02(\x03\x12\x10\n\x08truck_id\x18\x04 \x02(\x05\"\x1f\n\x0bUsendArrive\x12\x10\n\x08truck_id\x18\x01 \x02(\x05\"B\n\x08\x41Product\x12\x12\n\nproduct_id\x18\x01 \x02(\x03\x12\x13\n\x0b\x64\x65scription\x18\x02 \x02(\t\x12\r\n\x05\x63ount\x18\x03 \x02(\x05\"N\n\x08\x41Package\x12\t\n\x01x\x18\x01 \x02(\x05\x12\t\n\x01y\x18\x02 \x02(\x05\x12\x13\n\x0bshipment_id\x18\x03 \x02(\x03\x12\x17\n\x04item\x18\x04 \x03(\x0b\x32\t.AProduct\"?\n\x0e\x41SendAllLoaded\x12\x1b\n\x08packages\x18\x01 \x03(\x0b\x32\t.APackage\x12\x10\n\x08truck_id\x18\x02 \x02(\x05\"$\n\rUPacDelivered\x12\x13\n\x0bshipment_id\x18\x01 \x02(\x03\"9\n\x0c\x41\x42indUpsUser\x12\x13\n\x0bshipment_id\x18\x01 \x02(\x03\x12\x14\n\x0cups_username\x18\x02 \x02(\t\"2\n\x08UBindRes\x12\x13\n\x0bshipment_id\x18\x01 \x02(\x03\x12\x11\n\tis_binded\x18\x02 \x02(\x08\"%\n\x0eUResendPackage\x12\x13\n\x0bshipment_id\x18\x01 \x02(\x03\"\xe0\x01\n\tUAmessage\x12\x1f\n\x08world_id\x18\x01 \x01(\x0b\x32\r.USendWorldId\x12\"\n\npickup_res\x18\x02 \x01(\x0b\x32\x0e.UPacPickupRes\x12!\n\x0bsend_arrive\x18\x03 \x01(\x0b\x32\x0c.UsendArrive\x12%\n\rpac_delivered\x18\x04 \x01(\x0b\x32\x0e.UPacDelivered\x12\x1b\n\x08\x62ind_res\x18\x05 \x01(\x0b\x32\t.UBindRes\x12\'\n\x0eresend_package\x18\x06 \x01(\x0b\x32\x0f.UResendPackage\"r\n\tAUmessage\x12\x1b\n\x06pickup\x18\x01 \x01(\x0b\x32\x0b.APacPickup\x12#\n\nall_loaded\x18\x02 \x01(\x0b\x32\x0f.ASendAllLoaded\x12#\n\x0c\x62ind_upsuser\x18\x03 \x01(\x0b\x32\r.ABindUpsUser')
 )
 
 
@@ -84,6 +84,20 @@ _APACPICKUP = _descriptor.Descriptor(
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='x', full_name='APacPickup.x', index=3,
+      number=4, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='y', full_name='APacPickup.y', index=4,
+      number=5, type=5, cpp_type=1, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
   ],
   extensions=[
   ],
@@ -97,7 +111,7 @@ _APACPICKUP = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=46,
-  serialized_end=115,
+  serialized_end=137,
 )
 
 
@@ -148,8 +162,8 @@ _UPACPICKUPRES = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=117,
-  serialized_end=211,
+  serialized_start=139,
+  serialized_end=233,
 )
 
 
@@ -179,8 +193,8 @@ _USENDARRIVE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=213,
-  serialized_end=244,
+  serialized_start=235,
+  serialized_end=266,
 )
 
 
@@ -192,15 +206,22 @@ _APRODUCT = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='description', full_name='AProduct.description', index=0,
-      number=1, type=9, cpp_type=9, label=2,
+      name='product_id', full_name='AProduct.product_id', index=0,
+      number=1, type=3, cpp_type=2, label=2,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='description', full_name='AProduct.description', index=1,
+      number=2, type=9, cpp_type=9, label=2,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='count', full_name='AProduct.count', index=1,
-      number=2, type=5, cpp_type=1, label=2,
+      name='count', full_name='AProduct.count', index=2,
+      number=3, type=5, cpp_type=1, label=2,
       has_default_value=False, default_value=0,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -217,8 +238,8 @@ _APRODUCT = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=246,
-  serialized_end=292,
+  serialized_start=268,
+  serialized_end=334,
 )
 
 
@@ -269,8 +290,8 @@ _APACKAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=294,
-  serialized_end=372,
+  serialized_start=336,
+  serialized_end=414,
 )
 
 
@@ -307,8 +328,8 @@ _ASENDALLLOADED = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=374,
-  serialized_end=437,
+  serialized_start=416,
+  serialized_end=479,
 )
 
 
@@ -338,8 +359,8 @@ _UPACDELIVERED = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=439,
-  serialized_end=475,
+  serialized_start=481,
+  serialized_end=517,
 )
 
 
@@ -376,8 +397,8 @@ _ABINDUPSUSER = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=477,
-  serialized_end=534,
+  serialized_start=519,
+  serialized_end=576,
 )
 
 
@@ -414,8 +435,8 @@ _UBINDRES = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=536,
-  serialized_end=586,
+  serialized_start=578,
+  serialized_end=628,
 )
 
 
@@ -445,8 +466,8 @@ _URESENDPACKAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=588,
-  serialized_end=625,
+  serialized_start=630,
+  serialized_end=667,
 )
 
 
@@ -511,8 +532,8 @@ _UAMESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=628,
-  serialized_end=852,
+  serialized_start=670,
+  serialized_end=894,
 )
 
 
@@ -556,8 +577,8 @@ _AUMESSAGE = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=854,
-  serialized_end=968,
+  serialized_start=896,
+  serialized_end=1010,
 )
 
 _APACKAGE.fields_by_name['item'].message_type = _APRODUCT

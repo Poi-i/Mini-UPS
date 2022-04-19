@@ -7,8 +7,8 @@ message USendWorldId{
 message APacPickup{
     required int32 whid = 1; 
     required int64 shipment_id = 2; 
-    optional string ups_username = 3; 
-    required int32 x = 4; 
+    optional string ups_username = 3;
+    required int32 x = 4;
     required int32 y = 5;
 }
 
@@ -23,10 +23,10 @@ message UsendArrive{
     required int32 truck_id = 1;
 }
 
-message AProduct{
+message AProduct {
     required int64 product_id = 1;
-    required string description = 1;
-    required int32 count = 2;
+    required string description = 2;
+    required int32 count = 3;
 }
 
 message APackage{ 
