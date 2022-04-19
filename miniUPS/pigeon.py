@@ -87,7 +87,52 @@ def reconnect_to_word(world_id, to_world_socket) -> bool:
     return False
 
 
-def handle_world(u_rsp, socket_to_world, socket_to_amz):
+def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
+    print("recv from world: " + str(u_rsp))
+    # send ack to world
+
+    for u_finished in u_rsp.completions:
+        # renew truck's status
+        # tell amz truck has arrived
+        pass
+    
+    for u_delivery_made in u_rsp.delivered:
+        # renew truck's status
+        # renew package's status -> delivered
+        pass
+    
+    for ack in u_rsp.acks:
+        # terminate the request from our side, where ack = seqnum of our req
+        pass
+    
     return
-def handle_amz(au_msg, socket_to_world, socket_to_amz):
+
+'''
+ handle Amazon request "APacPickup"
+'''
+def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
+    return
+
+
+'''
+ handle Amazon request "ASendAllLoaded"
+'''
+def handle_amz_bindups(bind_upsuser: UA.ABindUpsUser, socket_to_world, socket_to_amz):
+    return
+
+'''
+ handle Amazon request "APacPickup"
+'''
+def handle_amz_bindups(pickup: UA.ABindUpsUser, socket_to_world, socket_to_amz):
+    return
+
+
+def handle_amz(au_msg: UA.AUmessage, socket_to_world, socket_to_amz):
+    # handle specific amazon request
+    if au_msg.HasField("pickup"):
+        handle_amz_pickup(au_msg.pickup, socket_to_world, socket_to_amz)
+    if au_msg.HasField("all_loaded"):
+        handle_amz_all_loaded(au_msg.all_loaded, socket_to_world, socket_to_amz)
+    if au_msg.HasField("bind_upsuser"):
+        handle_amz_bindups(au_msg.bind_upsuser, socket_to_world, socket_to_amz)
     return

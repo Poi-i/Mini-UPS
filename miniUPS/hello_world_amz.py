@@ -61,6 +61,7 @@ def main():
     p_to_amz.join()
     socket_to_world.close()
     socket_to_amz.close()
+    
 
 if __name__ == "__main__":
     main()
