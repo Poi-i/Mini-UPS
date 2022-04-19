@@ -1,6 +1,5 @@
 syntax = "proto2";
 
-
 message USendWorldId{
     required int64 world_id = 1;
 }
@@ -9,6 +8,8 @@ message APacPickup{
     required int32 whid = 1; 
     required int64 shipment_id = 2; 
     optional string ups_username = 3; 
+    required int32 x = 4; 
+    required int32 y = 5;
 }
 
 message UPacPickupRes{
@@ -23,6 +24,7 @@ message UsendArrive{
 }
 
 message AProduct{
+    required int64 product_id = 1;
     required string description = 1;
     required int32 count = 2;
 }
