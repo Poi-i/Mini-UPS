@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import socket
 from threading import Thread
 import threading
+from time import sleep
 # import pigeon
 from google.protobuf.internal.decoder import _DecodeVarint32
 from google.protobuf.internal.encoder import _EncodeVarint
@@ -15,6 +16,7 @@ import website.models as md
 
 executer = ThreadPoolExecutor(50)
 lock = threading.Lock()
+request_map = {}
 seq_num = 0
 
 def get_socket_to_amz():
