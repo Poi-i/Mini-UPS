@@ -156,8 +156,54 @@ def varify_user(username, package):
         # update package's username
         package.user = username
         package.save()
+        print("updated package = " + package)
         return True
     return False
+
+
+'''
+handle World part for handle_amz_pickup
+'''
+
+
+def w_pickup(truck_id, wh_id, socket_to_world):
+    # insert into DB: AssignedTruck
+    md.AssignedTruck.objects.create(whid=wh_id, truckid=truck_id)
+    global seqnum  # TODO: atomically increase seqnum += 1
+    go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum)
+
+    print("send go_pickup = " + go_pickup)
+
+    # send UCommands(UGoPickup) to World
+    write_to_world(socket_to_world,
+                   World_UPS.UCommands().pickups.append(go_pickup))
+    # update truck status to Traveling
+    truck = md.Truck.objects.update(status='TRAVELING')
+
+    print("updated truck = " + truck)
+
+
+'''
+handle Amazon part for handle_amz_pickup
+'''
+
+
+def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
+    ship_id = pickup.shipment_id
+    # insert into DB: Package
+    package = md.Package.objects.create(
+        shipment_id=ship_id, truckid=truck_id, x=pickup.x, y=pickup.y, status='in WH')
+    # update package with username if valid
+    if pickup.HasField("ups_username"):
+        is_binded = varify_user(pickup.ups_username, package)
+    pac_pickup_res = PBwrapper.pac_pickup_res(
+        package.tracking_id, is_binded, ship_id, truck_id)
+
+    print("send pac_pickup_res = " + pac_pickup_res)
+
+    # send response to Amazon
+    write_to_amz(socket_to_amz, UA.UAmessage(
+    ).pickup_res.CopyFrom(pac_pickup_res))
 
 
 '''
@@ -172,43 +218,36 @@ def varify_user(username, package):
 
 
 def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
-    # World part
+
+    print("received APacPickup = " + pickup)
+
     # pick an idle or delivering truck to pickup
     truck_id = pick_truck()
-    ship_id = pickup.shipment_id
-    # TODO: atomically increase seqnum += 1
-    global seqnum
-    # send UCommands to World
-    write_to_world(socket_to_world, World_UPS.UCommands().pickups.append(PBwrapper.go_pickup(
-        truck_id, pickup.whid, seqnum)))
-    # update truck status to Traveling
-    truck = md.Truck.objects.update(status='TRAVELING')
+    wh_id = pickup.whid
+    # World part
+    w_pickup(truck_id, wh_id, socket_to_world)
     # Amazon part
-    # insert to Package
-    package = md.Package.objects.create(
-        shipment_id=ship_id, truckid=truck_id, x=pickup.x, y=pickup.y, status='in WH')
-    if pickup.HasField("ups_username"):
-        is_binded = varify_user(pickup.ups_username, package)  # TODO
-        # package = md.Package.objects.get(shipment_id = pickup.shipment_id).update(user=)
-    pac_pickup_res = PBwrapper.pac_pickup_res(
-        package.tracking_id, is_binded, ship_id, truck_id)
-    # send response to Amazon
-    write_to_amz(socket_to_amz, UA.UAmessage(
-    ).pickup_res.CopyFrom(pac_pickup_res))
+    a_pickup(truck_id, pickup, socket_to_amz)
     return
 
 
 '''
  handle Amazon request "ASendAllLoaded"
  @recv from Amazon:
-    ASendAllLoaded: truckid, packages
+    ASendAllLoaded: truckid, packages(x,y,shipment_id, 
+                                        item(product_id, description, count))
  @send to World:
-    UGoDeliver: truckid, packages, seqnum
+    UGoDeliver: truckid, packages(packageid,x,y), seqnum
 '''
 
 
-def handle_amz_all_loaded(bind_upsuser: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
-
+def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
+    # parse ASendAllLoaded, insert into db: Package
+    truck_id = all_loaded.truck_id
+    for package in all_loaded.packages:
+        # insert into item
+        pac = md.Package.objects.create(tracking_id=)
+    # send Ucommands(UGoDeliver) to World
     return
 
 
@@ -217,7 +256,7 @@ def handle_amz_all_loaded(bind_upsuser: UA.ASendAllLoaded, socket_to_world, sock
 '''
 
 
-def handle_amz_bindups(pickup: UA.ABindUpsUser, socket_to_world, socket_to_amz):
+def handle_amz_bindups(bind_upsuser: UA.ABindUpsUser, socket_to_world, socket_to_amz):
     return
 
 
