@@ -203,9 +203,7 @@ def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
  @recv from Amazon:
     ASendAllLoaded: truckid, packages
  @send to World:
-    UGoDeliver: required int32 truckid = 1;
-                repeated UDeliveryLocation packages = 2;
-                required int64 seqnum = 3;
+    UGoDeliver: truckid, packages, seqnum
 '''
 
 

@@ -7,9 +7,8 @@ __pycache__/
 
 # protobuf demo
 final_proj/
-
 # C extensions
-*.so
+*.so 
 
 # Distribution / packaging
 .Python
