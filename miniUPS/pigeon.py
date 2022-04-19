@@ -150,7 +150,7 @@ verify the validation of ups username from Amazon
 '''
 
 
-def varify_user(username, package):
+def verify_user(username, package):
     user = md.User.objects.filter(name=username)
     if user != None:
         # update package's username
@@ -192,7 +192,7 @@ def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
         shipment_id=ship_id, truckid=truck_id, x=pickup.x, y=pickup.y, status='in WH')
     # update package with username if valid
     if pickup.HasField("ups_username"):
-        is_binded = varify_user(pickup.ups_username, package)
+        is_binded = verify_user(pickup.ups_username, package)
     pac_pickup_res = PBwrapper.pac_pickup_res(
         package.tracking_id, is_binded, ship_id, truck_id)
 
@@ -262,10 +262,21 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
 
 '''
  handle Amazon request "ABindUpsUser"
+ @recv from Amazon:
+    ABindUpsUser: shipment_id, ups_username
+ @send to Amazon:
+    UBindRes: shipment_id, is_binded
 '''
 
 
 def handle_amz_bindups(bind_upsuser: UA.ABindUpsUser, socket_to_world, socket_to_amz):
+    ship_id = bind_upsuser.shipment_id
+    package = md.Package.objects.filter(shipment_id=ship_id)
+    # verify user validaty, update package is valid
+    bind_res = PBwrapper.bind_res(
+        ship_id, verify_user(bind_upsuser.ups_username, package))
+    # send response to Amazon
+    write_to_amz(socket_to_amz, UA.UAmessage.bind_res.CopyFrom(bind_res))
     return
 
 
