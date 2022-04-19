@@ -42,7 +42,7 @@ class Package(models.Model):
         ('delivered', 'delivered')
     }
     tracking_id = models.IntegerField(primary_key=True, serialize=True)
-    shipment_id = models.IntegerField(blank=False)
+    shipment_id = models.IntegerField(blank=False, unique=True)
     truckid = models.ForeignKey(to=Truck, verbose_name="FK_truck",
                                 on_delete=models.CASCADE, default=None, blank=False, null=False)
     x = models.IntegerField(blank=False)  # destination addr
@@ -56,13 +56,15 @@ class Package(models.Model):
         return "tracking_id = " + str(self.tracking_id) + " ship_id = " + str(self.shipment_id) + " truckid = " + str(self.truckid) + " user = " + self.user + " status = " + self.status
 
 
-class Product(models.Model):
+class Item(models.Model):
     id = models.IntegerField(primary_key=True)
     description = models.CharField(blank=False, max_length=128)
     count = models.IntegerField(blank=False)
     tracking_id = models.ForeignKey(to=Package, verbose_name="FK_Package",
                                     on_delete=models.CASCADE, default=None, blank=False, null=False)
 
+    def __str__(self):
+        return "item description = " + self.description + " tracking_id = " + str(self.tracking_id)
 
 # record trucks on the way to warehouse(truck status = traveling)
 

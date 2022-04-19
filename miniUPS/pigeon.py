@@ -171,15 +171,12 @@ def w_pickup(truck_id, wh_id, socket_to_world):
     md.AssignedTruck.objects.create(whid=wh_id, truckid=truck_id)
     global seqnum  # TODO: atomically increase seqnum += 1
     go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum)
-
     print("send go_pickup = " + go_pickup)
-
     # send UCommands(UGoPickup) to World
     write_to_world(socket_to_world,
                    World_UPS.UCommands().pickups.append(go_pickup))
     # update truck status to Traveling
     truck = md.Truck.objects.update(status='TRAVELING')
-
     print("updated truck = " + truck)
 
 
@@ -243,11 +240,23 @@ def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
 
 def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
     # parse ASendAllLoaded, insert into db: Package
-    truck_id = all_loaded.truck_id
+    pac_list = []
     for package in all_loaded.packages:
-        # insert into item
-        pac = md.Package.objects.create(tracking_id=)
+        ship_id = package.shipment_id
+        track_id = md.Package.objects.filter(
+            shipment_id=ship_id).tracking_id
+        for item in package.items:
+            # insert into Product
+            item = md.Item.objects.create(
+                id=item.id, description=item.description, count=item.count, tracking_id=track_id)
+            print("insert item: " + item)
+        pac_list.append(PBwrapper.gene_package(ship_id, package.x, package.y))
+
+    global seqnum  # TODO: atomically increase seqnum += 1
     # send Ucommands(UGoDeliver) to World
+    go_deliver = PBwrapper.go_deliver(all_loaded.truck_id, pac_list, seqnum)
+    write_to_world(socket_to_world,
+                   World_UPS.UCommands().deliveries.append(go_deliver))
     return
 
 
