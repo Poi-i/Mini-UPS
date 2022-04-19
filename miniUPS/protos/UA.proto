@@ -1,6 +1,5 @@
 syntax = "proto2";
 
-
 message USendWorldId{
     required int64 world_id = 1;
 }

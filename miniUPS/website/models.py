@@ -55,6 +55,15 @@ class Package(models.Model):
     def __str__(self):
         return "tracking_id = " + str(self.tracking_id) + " ship_id = " + str(self.shipment_id) + " truckid = " + str(self.truckid) + " user = " + self.user + " status = " + self.status
 
+
+class Product(models.Model):
+    id = models.IntegerField(primary_key=True)
+    description = models.CharField(blank=False, max_length=128)
+    count = models.IntegerField(blank=False)
+    tracking_id = models.ForeignKey(to=Package, verbose_name="FK_Package",
+                                    on_delete=models.CASCADE, default=None, blank=False, null=False)
+
+
 # record trucks on the way to warehouse(truck status = traveling)
 
 

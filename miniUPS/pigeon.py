@@ -1,10 +1,14 @@
+from struct import pack
+from time import sleep
 from google.protobuf.internal.decoder import _DecodeVarint32
 from google.protobuf.internal.encoder import _EncodeVarint
 from requests import request
 from protos import world_ups_pb2 as World_UPS
 from protos import UA_pb2 as UA
 import PBwrapper
+from django.db.models import Q
 import website.models as md
+
 '''
 communication tool to Amazon and World
 '''
@@ -37,6 +41,17 @@ def recv_msg(socket_) -> str:
 
 
 def write_to_world(to_world_socket, msg):
+    # if (not msg.Is("UConnect")):
+    #     Ucommands = World_UPS.UCommands()
+    #     if(msg.Is("UGoPickup")):
+    #         Ucommands.pickups.append(msg)
+    #     if(msg.Is("UGoDeliver")):
+    #         Ucommands.deliveries.append(msg)
+    #     if(msg.Is("UQuery")):
+    #         Ucommands.queries.append(msg)
+    #     write_msg(to_world_socket, Ucommands)
+    # else:
+    # TODO: set simspeed, disconnect, acks
     write_msg(to_world_socket, msg)
 
 
@@ -214,15 +229,48 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
 
 '''
  handle Amazon request "APacPickup"
+ @recv from Amazon:
+    APacPickup: whid, shipment_id, ups_username, x, y
+ @send to World:
+    UGoPickup: truckid, whid, seqnum
+ @send to Amazon:
+    UPacPickupRes: tracking_id, is_binded, shipment_id, truck_id
 '''
 
 
 def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
+    # World part
+    # pick an idle or delivering truck to pickup
+    truck_id = pick_truck()
+    ship_id = pickup.shipment_id
+    # TODO: atomically increase seqnum += 1
+    global seqnum
+    # send UCommands to World
+    write_to_world(socket_to_world, World_UPS.UCommands().pickups.append(PBwrapper.go_pickup(
+        truck_id, pickup.whid, seqnum)))
+    # update truck status to Traveling
+    truck = md.Truck.objects.update(status='TRAVELING')
+    # Amazon part
+    # insert to Package
+    package = md.Package.objects.create(
+        shipment_id=ship_id, truckid=truck_id, x=pickup.x, y=pickup.y, status='in WH')
+    if pickup.HasField("ups_username"):
+        is_binded = varify_user(pickup.ups_username, package)  # TODO
+        # package = md.Package.objects.get(shipment_id = pickup.shipment_id).update(user=)
+    pac_pickup_res = PBwrapper.pac_pickup_res(
+        package.tracking_id, is_binded, ship_id, truck_id)
+    # send response to Amazon
+    write_to_amz(socket_to_amz, UA.UAmessage(
+    ).pickup_res.CopyFrom(pac_pickup_res))
     return
 
 
 '''
  handle Amazon request "ASendAllLoaded"
+ @recv from Amazon:
+    ASendAllLoaded: truckid, packages
+ @send to World:
+    UGoDeliver: truckid, packages, seqnum
 '''
 
 
@@ -231,7 +279,7 @@ def handle_amz_all_loaded(bind_upsuser: UA.ASendAllLoaded, socket_to_world, sock
 
 
 '''
- handle Amazon request "APacPickup"
+ handle Amazon request "ABindUpsUser"
 '''
 
 
