@@ -224,7 +224,78 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
     if u_rsp.HasField("finished") and u_rsp.finished:  # close connection
         print("disconnect successfully")
 
-    return
+
+def pick_truck():
+    while True:
+        # sort the result sorted from IDLE to DELIVERING, pick the 1st one
+        truck = md.Truck.objects.filter(Q(status='IDLE') | Q(
+            status='DELIVERING')).order_by('-status').first()
+        if truck != None:
+            print("the picked truck is:" + truck)
+            return truck.truckid
+        else:
+            # if no truck meet requirement, wait for 5s and try again
+            sleep(5)
+            continue
+
+
+'''
+verify the validation of ups username from Amazon
+@return: true if username valid, false vice versa
+'''
+
+
+def verify_user(username, package):
+    user = md.User.objects.filter(name=username)
+    if user != None:
+        # update package's username
+        package.user = username
+        package.save()
+        print("updated package = " + package)
+        return True
+    return False
+
+
+'''
+handle World part for handle_amz_pickup
+'''
+
+
+def w_pickup(truck_id, wh_id, socket_to_world):
+    # insert into DB: AssignedTruck
+    md.AssignedTruck.objects.create(whid=wh_id, truckid=truck_id)
+    global seqnum  # TODO: atomically increase seqnum += 1
+    go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum)
+    print("send go_pickup = " + go_pickup)
+    # send UCommands(UGoPickup) to World
+    write_to_world(socket_to_world,
+                   World_UPS.UCommands().pickups.append(go_pickup))
+    # update truck status to Traveling
+    truck = md.Truck.objects.update(status='TRAVELING')
+    print("updated truck = " + truck)
+
+
+'''
+handle Amazon part for handle_amz_pickup
+'''
+
+
+def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
+    ship_id = pickup.shipment_id
+    # insert into DB: Package
+    package = md.Package.objects.create(
+        shipment_id=ship_id, truckid=truck_id, x=pickup.x, y=pickup.y, status='in WH')
+    # update package with username if valid
+    if pickup.HasField("ups_username"):
+        is_binded = verify_user(pickup.ups_username, package)
+    pac_pickup_res = PBwrapper.pac_pickup_res(
+        package.tracking_id, is_binded, ship_id, truck_id)
+
+    print("send pac_pickup_res = " + pac_pickup_res)
+
+    # send response to Amazon
+    write_to_amz(socket_to_amz, UA.UAmessage(
+    ).pickup_res.CopyFrom(pac_pickup_res))
 
 
 '''
@@ -239,51 +310,68 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
 
 
 def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
-    # World part
+
+    print("received APacPickup = " + pickup)
+
     # pick an idle or delivering truck to pickup
     truck_id = pick_truck()
-    ship_id = pickup.shipment_id
-    # TODO: atomically increase seqnum += 1
-    global seqnum
-    # send UCommands to World
-    write_to_world(socket_to_world, World_UPS.UCommands().pickups.append(PBwrapper.go_pickup(
-        truck_id, pickup.whid, seqnum)))
-    # update truck status to Traveling
-    truck = md.Truck.objects.update(status='TRAVELING')
+    wh_id = pickup.whid
+    # World part
+    w_pickup(truck_id, wh_id, socket_to_world)
     # Amazon part
-    # insert to Package
-    package = md.Package.objects.create(
-        shipment_id=ship_id, truckid=truck_id, x=pickup.x, y=pickup.y, status='in WH')
-    if pickup.HasField("ups_username"):
-        is_binded = varify_user(pickup.ups_username, package)  # TODO
-        # package = md.Package.objects.get(shipment_id = pickup.shipment_id).update(user=)
-    pac_pickup_res = PBwrapper.pac_pickup_res(
-        package.tracking_id, is_binded, ship_id, truck_id)
-    # send response to Amazon
-    write_to_amz(socket_to_amz, UA.UAmessage(
-    ).pickup_res.CopyFrom(pac_pickup_res))
+    a_pickup(truck_id, pickup, socket_to_amz)
     return
 
 
 '''
  handle Amazon request "ASendAllLoaded"
  @recv from Amazon:
-    ASendAllLoaded: truckid, packages
+    ASendAllLoaded: truckid, packages(x,y,shipment_id, 
+                                        item(product_id, description, count))
  @send to World:
-    UGoDeliver: truckid, packages, seqnum
+    UGoDeliver: truckid, packages(packageid,x,y), seqnum
 '''
 
 
-def handle_amz_all_loaded(bind_upsuser: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
+def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
+    # parse ASendAllLoaded, insert into db: Package
+    pac_list = []
+    for package in all_loaded.packages:
+        ship_id = package.shipment_id
+        track_id = md.Package.objects.filter(
+            shipment_id=ship_id).tracking_id
+        for item in package.items:
+            # insert into Product
+            item = md.Item.objects.create(
+                id=item.id, description=item.description, count=item.count, tracking_id=track_id)
+            print("insert item: " + item)
+        pac_list.append(PBwrapper.gene_package(ship_id, package.x, package.y))
+
+    global seqnum  # TODO: atomically increase seqnum += 1
+    # send Ucommands(UGoDeliver) to World
+    go_deliver = PBwrapper.go_deliver(all_loaded.truck_id, pac_list, seqnum)
+    write_to_world(socket_to_world,
+                   World_UPS.UCommands().deliveries.append(go_deliver))
     return
 
 
 '''
  handle Amazon request "ABindUpsUser"
+ @recv from Amazon:
+    ABindUpsUser: shipment_id, ups_username
+ @send to Amazon:
+    UBindRes: shipment_id, is_binded
 '''
 
 
-def handle_amz_bindups(pickup: UA.ABindUpsUser, socket_to_world, socket_to_amz):
+def handle_amz_bindups(bind_upsuser: UA.ABindUpsUser, socket_to_world, socket_to_amz):
+    ship_id = bind_upsuser.shipment_id
+    package = md.Package.objects.filter(shipment_id=ship_id)
+    # verify user validaty, update package is valid
+    bind_res = PBwrapper.bind_res(
+        ship_id, verify_user(bind_upsuser.ups_username, package))
+    # send response to Amazon
+    write_to_amz(socket_to_amz, UA.UAmessage.bind_res.CopyFrom(bind_res))
     return
 
 
