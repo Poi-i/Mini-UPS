@@ -125,6 +125,7 @@ def handle_world_send_ack(u_rsp, socket_to_world):
         # synchronized out?
         write_to_world(socket_to_world, u_commands)
 
+
 def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
     truck_id_ = u_finished.truckid
     print("World tells truck[" + str(truck_id_) + "]" + " arrived at warehouse" + "\n")
