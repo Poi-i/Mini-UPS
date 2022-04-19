@@ -24,9 +24,10 @@ message UsendArrive{
     required int32 truck_id = 1;
 }
 
-message AProduct{
-    required string description = 1;
-    required int32 count = 2;
+message AProduct {
+    required int64 product_id = 1;
+    required string description = 2;
+    required int32 count = 3;
 }
 
 message APackage{ 
