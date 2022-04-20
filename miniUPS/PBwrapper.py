@@ -63,6 +63,14 @@ def pac_pickup_res(tracking_id, is_binded, shipment_id, truck_id) -> UA.UPacPick
     return UPac_pickup_res
 
 
+def send_arrive(truckid, x, y) -> UA.UsendArrive:
+    Usend_arrive = UA.UsendArrive()
+    Usend_arrive.truckid = truckid
+    Usend_arrive.x = x
+    Usend_arrive.y = y
+    return Usend_arrive
+
+
 def pac_delivered(shipment_id) -> UA.UPacDelivered:
     Upac_delivered = UA.UPacDelivered()
     Upac_delivered.shipment_id = shipment_id

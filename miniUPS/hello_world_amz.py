@@ -219,8 +219,10 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
     print("truck[" + str(truck_id_) + "]'s status: " + truck_status + "\n")
     if truck_status == "ARRIVE WAREHOUSE":
         # tell amz truck has arrived
-        ua_msg = UA.UAmessage()
-        ua_msg.UsendArrive.truck_id = truck_id_
+
+        send_arrive = PBwrapper.send_arrive(
+            truck_id_, u_finished.x, u_finished.y)
+        ua_msg = UA.UAmessage().send_arrive.CopyFrom(send_arrive)
         print("send to amz: " + ua_msg + "\n")
         # lock on socket?
         write_to_amz(socket_to_amz, ua_msg)

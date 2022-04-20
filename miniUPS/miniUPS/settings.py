@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +26,8 @@ SECRET_KEY = 'django-insecure-68n3743#bxo045!87msjm#ognh=+6-w-s4cnd92@g_zoxx-*_#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["vcm-25953.vm.duke.edu", "vcm-26474.vm.duke.edu", "127.0.0.1"]
+ALLOWED_HOSTS = ["vcm-25953.vm.duke.edu",
+                 "vcm-26474.vm.duke.edu", "127.0.0.1", "localhost"]
 CSRF_TRUSTED_ORIGINS = [
     'http://vcm-25953.vm.duke.edu',
     'http://vcm-25953.vm.duke.edu:8000',
@@ -40,6 +42,8 @@ CSRF_TRUSTED_ORIGINS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'bootstrap5',
+    'bootstrap_datepicker_plus',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -65,7 +69,7 @@ ROOT_URLCONF = 'miniUPS.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
