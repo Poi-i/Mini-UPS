@@ -1,3 +1,9 @@
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
+import django
+if django.VERSION >= (1, 7):
+    django.setup()
+
 import sys
 from concurrent.futures import ThreadPoolExecutor
 import socket
@@ -142,6 +148,7 @@ def connect_to_word(truck_num, socket_to_world) -> bool:
     print("result: " + uconnected.result)
     world_id = uconnected.worldid
     if uconnected.result == "connected!":
+        # TODO: write truck to db
         return world_id, True
     return world_id, False
 
@@ -455,22 +462,24 @@ def a_worldid(socket_to_amz, worldid):
 
 
 def main():
+    # socket_to_world = None
+    socket_to_amz = None
     socket_to_world = get_socket_to_world()
-    socket_to_amz = get_socket_to_amz()
+    # socket_to_amz = get_socket_to_amz()
 
     # send connect/reconnect to world
     world_id = None
     retry = 5
-    if sys.argv[0] == 'create':
-        truck_num = int(sys.argv[1])
+    if sys.argv[1] == 'create':
+        truck_num = int(sys.argv[2])
         world_id, is_connected = connect_to_word(truck_num, socket_to_world)
         while retry and not is_connected:
             print("Connect to world failed, retrying...")
             world_id, is_connected = connect_to_word(
                 truck_num, socket_to_world)
             retry -= 1
-    elif sys.argv[0] == 'reconnect':
-        world_id = int(sys.argv[1])
+    elif sys.argv[1] == 'reconnect':
+        world_id = int(sys.argv[2])
         world_id, is_connected = reconnect_to_word(world_id, socket_to_world)
         while retry and not is_connected:
             print("Connect to world failed, retrying...")
@@ -478,7 +487,8 @@ def main():
                 world_id, socket_to_world)
             retry -= 1
     else:
-        print("Please check your input: " + sys.argv + "\n")
+        print("Please check your input: " + str(sys.argv) + "\n")
+        sys.exit()
 
     # send the world_id to amz
     a_worldid(socket_to_amz, world_id)
