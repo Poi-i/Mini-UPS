@@ -7,10 +7,10 @@ app_name = "website"
 urlpatterns = [
     path('', views.index, name='index'),
     path('homepage/', views.index, name='index'),
-    path('track/', views.track, name='track'),
+    path('track/<int:id>', views.track, name='track'),
     path('register/', views.register, name='register'),
     path('login/', views.login, name='login'),
     path('logout/', views.logout, name='logout'),
     path('account/', views.account, name='account'),
-    path('account/package/', views.package_detail, name='package_detail'),
+    # path('account/package/', views.package_detail, name='package_detail'),
 ]
