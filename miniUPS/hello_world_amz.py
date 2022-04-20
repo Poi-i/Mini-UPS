@@ -472,6 +472,7 @@ def main():
     retry = 5
     if sys.argv[1] == 'create':
         truck_num = int(sys.argv[2])
+        print("# of trucks to create: " + str(truck_num) + "\n")
         world_id, is_connected = connect_to_word(truck_num, socket_to_world)
         while retry and not is_connected:
             print("Connect to world failed, retrying...")
@@ -489,7 +490,7 @@ def main():
     else:
         print("Please check your input: " + str(sys.argv) + "\n")
         sys.exit()
-
+    return
     # send the world_id to amz
     a_worldid(socket_to_amz, world_id)
     # start one thread to dock amz
