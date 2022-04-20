@@ -1,23 +1,23 @@
+import website.models as md
+from django.db.models import Q
+import PBwrapper
+from protos import UA_pb2 as UA
+from protos import world_ups_pb2 as World_UPS
+from google.protobuf.internal.encoder import _EncodeVarint
+from google.protobuf.internal.decoder import _DecodeVarint32
+from time import sleep
+import threading
+from threading import Thread
+import socket
+from concurrent.futures import ThreadPoolExecutor
+import sys
+import django
 import os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
-import django
 if django.VERSION >= (1, 7):
     django.setup()
 
-import sys
-from concurrent.futures import ThreadPoolExecutor
-import socket
-from threading import Thread
-import threading
-from time import sleep
 # import pigeon
-from google.protobuf.internal.decoder import _DecodeVarint32
-from google.protobuf.internal.encoder import _EncodeVarint
-from protos import world_ups_pb2 as World_UPS
-from protos import UA_pb2 as UA
-import PBwrapper
-from django.db.models import Q
-import website.models as md
 
 
 executer = ThreadPoolExecutor(50)
@@ -284,8 +284,12 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
         print("disconnect successfully")
 
 
-def pick_truck():
+def pick_truck(wh_id):
     while True:
+        # check whether already exist truck on the way to the WH
+        assigned_truck = md.AssignedTruck.objects.filter(whid=wh_id).first()
+        if(assigned_truck != None):
+            return assigned_truck.truckid
         # sort the result sorted from IDLE to DELIVERING, pick the 1st one
         truck = md.Truck.objects.filter(Q(status='IDLE') | Q(
             status='DELIVERING')).order_by('-status').first()
@@ -372,10 +376,10 @@ def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
 def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
 
     print("received APacPickup = " + pickup)
-
-    # pick an idle or delivering truck to pickup
-    truck_id = pick_truck()
     wh_id = pickup.whid
+    # pick an idle or delivering truck to pickup
+    truck_id = pick_truck(wh_id)
+
     # World part
     w_pickup(truck_id, wh_id, socket_to_world)
     # Amazon part
