@@ -1,3 +1,8 @@
+import django
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
+if django.VERSION >= (1, 7):
+    django.setup()
 import sys
 from concurrent.futures import ThreadPoolExecutor
 import socket
@@ -11,12 +16,6 @@ from protos import UA_pb2 as UA
 import PBwrapper
 from django.db.models import Q
 import website.models as md
-import django
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
-if django.VERSION >= (1, 7):
-    django.setup()
-
 
 # import pigeon
 
@@ -33,7 +32,7 @@ world_id = None
 
 def get_socket_to_amz():
     ups_host = '127.0.0.1'
-    ip_port_amz = (ups_host, 8888)
+    ip_port_amz = (ups_host, 54321)
     listen_to_amz = socket.socket()
     listen_to_amz.bind(ip_port_amz)
     listen_to_amz.listen(5)
@@ -475,17 +474,19 @@ send worldid to Amazon
 
 
 def a_worldid(socket_to_amz, worldid):
-    world_id = PBwrapper.send_WorldId(worldid)
-    write_to_amz(socket_to_amz, UA.UAmessage().world_id.CopyFrom(world_id))
+    # world_id_ = PBwrapper.send_WorldId(worldid)
+    ua_msg = UA.UAmessage()
+    ua_msg.world_id.world_id = worldid
+    write_to_amz(socket_to_amz, ua_msg)
     return
 
 
 def main():
     global world_id
     # socket_to_world = None
-    socket_to_amz = None
+    # socket_to_amz = None
     socket_to_world = get_socket_to_world()
-    # socket_to_amz = get_socket_to_amz()
+    socket_to_amz = get_socket_to_amz()
 
     # send connect/reconnect to world
     retry = 5
@@ -513,20 +514,24 @@ def main():
         print(
             "Usage: python3 hello_world_amz.py reconnect [world_id] for create new world" + "\n")
         sys.exit()
-    # return
+    
+    if not retry:
+        print("Failed to conenct the world" + "\n")
+        sys.exit()
+
     # send the world_id to amz
     a_worldid(socket_to_amz, world_id)
     # start one thread to dock amz
-    t_to_amz = Thread(target=dock_amz, args=(socket_to_world, socket_to_amz))
-    t_to_amz.start()
+    # t_to_amz = Thread(target=dock_amz, args=(socket_to_world, socket_to_amz))
+    # t_to_amz.start()
 
     # start one thread to dock world
-    t_to_world = Thread(target=dock_world, args=(
-        socket_to_world, socket_to_amz))
-    t_to_world.start()
+    # t_to_world = Thread(target=dock_world, args=(
+    #     socket_to_world, socket_to_amz))
+    # t_to_world.start()
 
-    t_to_world.join()
-    t_to_amz.join()
+    # t_to_world.join()
+    # t_to_amz.join()
     socket_to_world.close()
     socket_to_amz.close()
 

@@ -50,7 +50,7 @@ def query_truck(truckid, seqnum) -> World_UPS.UQuery:
 
 def send_WorldId(worldid) -> UA.USendWorldId:
     Usend_Worldid = UA.USendWorldId()
-    Usend_Worldid.worldid = worldid
+    Usend_Worldid.world_id = worldid
     return Usend_Worldid
 
 
