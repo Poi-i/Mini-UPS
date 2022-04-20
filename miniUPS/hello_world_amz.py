@@ -1,29 +1,34 @@
-import website.models as md
-from django.db.models import Q
-import PBwrapper
-from protos import UA_pb2 as UA
-from protos import world_ups_pb2 as World_UPS
-from google.protobuf.internal.encoder import _EncodeVarint
-from google.protobuf.internal.decoder import _DecodeVarint32
-from time import sleep
-import threading
-from threading import Thread
-import socket
-from concurrent.futures import ThreadPoolExecutor
 import sys
+from concurrent.futures import ThreadPoolExecutor
+import socket
+from threading import Thread
+import threading
+from time import sleep
+from google.protobuf.internal.decoder import _DecodeVarint32
+from google.protobuf.internal.encoder import _EncodeVarint
+from protos import world_ups_pb2 as World_UPS
+from protos import UA_pb2 as UA
+import PBwrapper
+from django.db.models import Q
+import website.models as md
 import django
 import os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
 if django.VERSION >= (1, 7):
     django.setup()
 
+
 # import pigeon
 
 
 executer = ThreadPoolExecutor(50)
 lock = threading.Lock()
+lock_socket_world = threading.Lock()
+lock_socket_amz = threading.Lock()
+
 request_map = {}
 seq_num = 0
+world_id = None
 
 
 def get_socket_to_amz():
@@ -37,7 +42,7 @@ def get_socket_to_amz():
 
 
 def get_socket_to_world():
-    world_host = 'vcm-26338.vm.duke.edu'
+    world_host = 'vcm-26474.vm.duke.edu'
     ip_port_w = (world_host, 12345)
     socket_to_world = socket.socket()
     socket_to_world.connect(ip_port_w)
@@ -97,7 +102,7 @@ def recv_msg(socket_) -> str:
     return whole_message
 
 
-def write_to_world(to_world_socket, msg):
+def write_to_world(socket_to_world, msg):
     # if (not msg.Is("UConnect")):
     #     Ucommands = World_UPS.UCommands()
     #     if(msg.Is("UGoPickup")):
@@ -109,11 +114,21 @@ def write_to_world(to_world_socket, msg):
     #     write_msg(to_world_socket, Ucommands)
     # else:
     # TODO: set simspeed, disconnect, acks
-    write_msg(to_world_socket, msg)
+    # write_msg(socket_to_world, msg)
+    string_msg = msg.SerializeToString()
+    lock_socket_world.acquire()
+    _EncodeVarint(socket_to_world.send, len(string_msg), None)
+    socket_to_world.send(string_msg)
+    lock_socket_world.release()
 
 
-def write_to_amz(to_amazom_socket, msg: UA.UAmessage):
-    write_msg(to_amazom_socket, msg)
+def write_to_amz(socket_to_amz, msg: UA.UAmessage):
+    # write_msg(to_amazom_socket, msg)
+    string_msg = msg.SerializeToString()
+    lock_socket_amz.acquire()
+    _EncodeVarint(socket_to_amz.send, len(string_msg), None)
+    socket_to_amz.send(string_msg)
+    lock_socket_amz.release()
 
 # Recv from world's response after successfully connected
 
@@ -157,14 +172,14 @@ def reconnect_to_word(world_id, socket_to_world) -> bool:
     msg = World_UPS.UConnect()
     msg.worldid = world_id
     msg.isAmazon = False
-    write_to_world(socket_to_world, msg)
+    write_msg(socket_to_world, msg)
     uconnected = World_UPS.UConnected()
     uconnected.ParseFromString(recv_msg(socket_to_world))
     print("world id: " + str(uconnected.worldid))
     print("result: " + uconnected.result)
     if uconnected.result == "connected!":
-        return True
-    return False
+        return world_id, True
+    return world_id, False
 
 
 """
@@ -468,16 +483,17 @@ def a_worldid(socket_to_amz, worldid):
 
 
 def main():
+    global world_id
     # socket_to_world = None
     socket_to_amz = None
     socket_to_world = get_socket_to_world()
     # socket_to_amz = get_socket_to_amz()
 
     # send connect/reconnect to world
-    world_id = None
     retry = 5
     if sys.argv[1] == 'create':
         truck_num = int(sys.argv[2])
+        print("# of trucks to create: " + str(truck_num) + "\n")
         world_id, is_connected = connect_to_word(truck_num, socket_to_world)
         while retry and not is_connected:
             print("Connect to world failed, retrying...")
@@ -494,8 +510,12 @@ def main():
             retry -= 1
     else:
         print("Please check your input: " + str(sys.argv) + "\n")
+        print(
+            "Usage: python3 hello_world_amz.py create [truck_num] for create new world" + "\n")
+        print(
+            "Usage: python3 hello_world_amz.py reconnect [world_id] for create new world" + "\n")
         sys.exit()
-
+    # return
     # send the world_id to amz
     a_worldid(socket_to_amz, world_id)
     # start one thread to dock amz
