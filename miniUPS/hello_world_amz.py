@@ -1,3 +1,4 @@
+from collections import defaultdict
 import django
 import os
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
@@ -34,18 +35,31 @@ def get_socket_to_amz():
     ups_host = '127.0.0.1'
     ip_port_amz = (ups_host, 54321)
     listen_to_amz = socket.socket()
-    listen_to_amz.bind(ip_port_amz)
-    listen_to_amz.listen(5)
-    socket_to_amz, address = listen_to_amz.accept()
-    return socket_to_amz
+    try:
+        listen_to_amz.bind(ip_port_amz)
+        listen_to_amz.listen(5)
+        socket_to_amz, address = listen_to_amz.accept()
+        print("connect to amz" + "\n")
+        return socket_to_amz
+    except:
+        print("having problem in connecting to amz\n")
+        listen_to_amz.close()
+        sys.exit(1)
 
 
 def get_socket_to_world():
     world_host = 'vcm-26474.vm.duke.edu'
     ip_port_w = (world_host, 12345)
     socket_to_world = socket.socket()
-    socket_to_world.connect(ip_port_w)
-    return socket_to_world
+    try:
+        socket_to_world.connect(ip_port_w)
+        print("connect to world" + "\n")
+        return socket_to_world
+    except:
+        print("having problem in connectiong to world\n")
+        socket_to_world.close()
+        sys.exit(1)
+        
 
 
 def get_seqnum() -> int:
@@ -63,17 +77,33 @@ def get_world_id_from_input():
 
 
 def dock_amz(socket_to_world, socket_to_amz):
+    print("dock to amz")
+    count = 0
     while True:
-        au_msg = recv_from_amz(socket_to_amz)
+        print(count)
+        count += 1
+        au_msg, is_socket_closed = recv_from_amz(socket_to_amz)
+        if is_socket_closed:
+            break
+        if not au_msg:
+            continue
         executer.submit(handle_amz, au_msg,
                         socket_to_world, socket_to_amz)
+    print("dock amz ends")
+    
 
 
 def dock_world(socket_to_world, socket_to_amz):
+    print("dock to world")
     while True:
-        u_resp = recv_from_world(socket_to_world)
+        u_resp, is_socket_close = recv_from_world(socket_to_world)
+        if is_socket_close:
+            break
+        if not u_resp:
+            continue
         executer.submit(handle_world, u_resp,
                         socket_to_world, socket_to_amz)
+    print("dock world ends")
 
 
 """
@@ -93,12 +123,20 @@ def recv_msg(socket_) -> str:
     var_int_buff = []
     while True:
         buf = socket_.recv(1)
+        if len(buf) <= 0:
+            return None, True
         var_int_buff += buf
-        msg_len, new_pos = _DecodeVarint32(var_int_buff, 0)
-        if new_pos != 0:
-            break
+        print(str(var_int_buff))
+        try:
+            msg_len, new_pos = _DecodeVarint32(var_int_buff, 0)
+            if new_pos != 0:
+                break
+        except IndexError:
+            print("Error in decoding msg\n")
+            continue
+    print("msg_len: " + str(msg_len) + "\n")
     whole_message = socket_.recv(msg_len)
-    return whole_message
+    return whole_message, False
 
 
 def write_to_world(socket_to_world, msg):
@@ -115,6 +153,7 @@ def write_to_world(socket_to_world, msg):
     # TODO: set simspeed, disconnect, acks
     # write_msg(socket_to_world, msg)
     string_msg = msg.SerializeToString()
+    print("write to world:" + str(string_msg) + "\n")
     lock_socket_world.acquire()
     _EncodeVarint(socket_to_world.send, len(string_msg), None)
     socket_to_world.send(string_msg)
@@ -133,36 +172,62 @@ def write_to_amz(socket_to_amz, msg: UA.UAmessage):
 
 
 def recv_from_world(to_world_socket):
-    whole_message = recv_msg(to_world_socket)
+    whole_message, is_socket_closed = recv_msg(to_world_socket)
+    print("recv from world: " + str(whole_message) + "\n")
+    if is_socket_closed:
+        return None, True
     world_res = World_UPS.UResponses()
-    world_res.ParseFromString(whole_message)
-    return world_res
+    try:
+        world_res.ParseFromString(whole_message)
+        return world_res, False
+    except:
+        print("Error parsing message from world\n")
+        return None, False
 
 
-def recv_from_amz(to_amazom_socket) -> UA.AUmessage:
-    whole_message = recv_msg(to_amazom_socket)
+def recv_from_amz(socket_to_amazom) -> UA.AUmessage:
+    whole_message, is_socket_closed = recv_msg(socket_to_amazom)
+    print("recv from amz: " + str(whole_message) + "\n")
+    if is_socket_closed:
+        return None, True
     au_msg = UA.AUmessage()
-    au_msg.ParseFromString(whole_message)
-    return au_msg
-
+    try:
+        au_msg.ParseFromString(whole_message)
+        return au_msg, False
+    except:
+        print("Error parsing message from amz\n")
+        return None, False
 
 def connect_to_word(truck_num, socket_to_world) -> bool:
     msg = World_UPS.UConnect()
     msg.isAmazon = False
+    id_to_pos = []
     for i in range(truck_num):
         truck_to_add = msg.trucks.add()
         truck_to_add.id = i
-        truck_to_add.x = i
-        truck_to_add.y = i
+        x_ = i
+        y_ = i
+        truck_to_add.x = x_
+        truck_to_add.y = y_
+        id_to_pos.append([x_, y_])
     msg.isAmazon = False
     write_msg(socket_to_world, msg)  # no need for repeat
+    uconnected_str, _ = recv_msg(socket_to_world)
+    print("receive from world: " + str(uconnected_str) + "\n")
     uconnected = World_UPS.UConnected()
-    uconnected.ParseFromString(recv_msg(socket_to_world))
+    uconnected.ParseFromString(uconnected_str)
     print("world id: " + str(uconnected.worldid))
     print("result: " + uconnected.result)
     world_id = uconnected.worldid
     if uconnected.result == "connected!":
-        # TODO: write truck to db
+        print("connect to world " + str(world_id) + " successfully\n")
+        # write truck to db
+        for val in id_to_pos:
+            new_truck = md.Truck()
+            new_truck.status = "IDLE"
+            new_truck.x = val[0]
+            new_truck.y = val[1]
+            new_truck.save()
         return world_id, True
     return world_id, False
 
@@ -172,11 +237,14 @@ def reconnect_to_word(world_id, socket_to_world) -> bool:
     msg.worldid = world_id
     msg.isAmazon = False
     write_msg(socket_to_world, msg)
+    uconnected_str, _ = recv_msg(socket_to_world)
+    print("receive from world: " + str(uconnected_str) + "\n")
     uconnected = World_UPS.UConnected()
-    uconnected.ParseFromString(recv_msg(socket_to_world))
+    uconnected.ParseFromString(uconnected_str)
     print("world id: " + str(uconnected.worldid))
     print("result: " + uconnected.result)
     if uconnected.result == "connected!":
+        print("reconnect to world " + str(world_id) + " successfully\n")
         return world_id, True
     return world_id, False
 
@@ -391,7 +459,7 @@ def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
 
 def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
 
-    print("received APacPickup = " + pickup)
+    print("received APacPickup = " + str(pickup))
     wh_id = pickup.whid
     # pick an idle or delivering truck to pickup
     truck_id = pick_truck(wh_id)
@@ -484,17 +552,20 @@ def a_worldid(socket_to_amz, worldid):
 
 
 def main():
+    
     global world_id
     # socket_to_world = None
     # socket_to_amz = None
     socket_to_world = get_socket_to_world()
     socket_to_amz = get_socket_to_amz()
-
     # send connect/reconnect to world
     retry = 5
     if sys.argv[1] == 'create':
         truck_num = int(sys.argv[2])
         print("# of trucks to create: " + str(truck_num) + "\n")
+        if truck_num <= 0:
+            print("# of trucks should be positive\n")
+            sys.exit(1)
         world_id, is_connected = connect_to_word(truck_num, socket_to_world)
         while retry and not is_connected:
             print("Connect to world failed, retrying...")
@@ -516,7 +587,7 @@ def main():
         print(
             "Usage: python3 hello_world_amz.py reconnect [world_id] for create new world" + "\n")
         sys.exit()
-    
+
     if not retry:
         print("Failed to conenct the world" + "\n")
         sys.exit()
@@ -524,18 +595,21 @@ def main():
     # send the world_id to amz
     a_worldid(socket_to_amz, world_id)
     # start one thread to dock amz
-    # t_to_amz = Thread(target=dock_amz, args=(socket_to_world, socket_to_amz))
-    # t_to_amz.start()
+    try:
+        t_to_amz = Thread(target=dock_amz, args=(socket_to_world, socket_to_amz))
 
-    # start one thread to dock world
-    # t_to_world = Thread(target=dock_world, args=(
-    #     socket_to_world, socket_to_amz))
-    # t_to_world.start()
+        # start one thread to dock world
+        t_to_world = Thread(target=dock_world, args=(
+            socket_to_world, socket_to_amz))
 
-    # t_to_world.join()
-    # t_to_amz.join()
-    socket_to_world.close()
-    socket_to_amz.close()
+        t_to_world.start()
+        t_to_amz.start()
+
+    finally:
+        t_to_world.join()
+        t_to_amz.join()
+        socket_to_world.close()
+        socket_to_amz.close()
 
 
 if __name__ == "__main__":
