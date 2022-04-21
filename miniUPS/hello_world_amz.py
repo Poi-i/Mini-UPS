@@ -123,7 +123,7 @@ def recv_msg(socket_) -> str:
     var_int_buff = []
     while True:
         buf = socket_.recv(1)
-        if len(buf) <= 0:
+        if len(buf) <= 0: # socket closes
             return None, True
         var_int_buff += buf
         print(str(var_int_buff))
@@ -552,8 +552,13 @@ def a_worldid(socket_to_amz, worldid):
 
 
 def main():
-    
-    global world_id
+    if len(sys.argv) < 3:
+        print(
+            "Usage: python3 hello_world_amz.py create [truck_num] for create new world" + "\n")
+        print(
+            "Usage: python3 hello_world_amz.py reconnect [world_id] for create new world" + "\n")
+        sys.exit(1)
+    world_id = None
     # socket_to_world = None
     # socket_to_amz = None
     socket_to_world = get_socket_to_world()
@@ -586,7 +591,7 @@ def main():
             "Usage: python3 hello_world_amz.py create [truck_num] for create new world" + "\n")
         print(
             "Usage: python3 hello_world_amz.py reconnect [world_id] for create new world" + "\n")
-        sys.exit()
+        sys.exit(1)
 
     if not retry:
         print("Failed to conenct the world" + "\n")
