@@ -346,6 +346,7 @@ def w_pickup(truck_id, wh_id, socket_to_world):
     md.AssignedTruck.objects.create(whid=wh_id, truckid=truck_id)
     # global seqnum  # TODO: atomically increase seqnum += 1
     seqnum_ = get_seqnum()
+    # TODO: maybe need to lock this pickup function
     go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum_)
     print("send go_pickup = " + go_pickup)
     # send UCommands(UGoPickup) to World
