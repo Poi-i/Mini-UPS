@@ -9,12 +9,18 @@ def index(request):
     if 'username' not in request.session:
         return redirect('/login')
     if (request.method == 'POST'):
-        track_form = forms.TrackForm(request.Post)
+        track_form = forms.TrackForm(request.POST)
         if track_form.is_valid():
-            package = md.Package.objects.filter(
-                tracking_id=track_form.cleaned_data['trackingid'])
-            # return render(request, 'track.html', locals())
-            return redirect('track', id=package.tracking_id)
+            try:
+                package = md.Package.objects.filter(
+                    tracking_id=track_form.cleaned_data['trackingid']).first()
+            except:
+                package = None
+            if package is None:
+                error_message = 'The tracking number you entered is not valid. Please try again.'
+                return render(request, 'index.html', locals())
+            return redirect('website:track', id=package.tracking_id)
+
     else:
         track_form = forms.TrackForm()
     return render(request, 'index.html', locals())
@@ -41,16 +47,20 @@ def register(request):
             except:
                 existed = None
             if existed is not None:
-                error_message = 'email existed!'
+                error_message = 'username existed!'
+                return render(request, 'register.html', locals())
+            try:
+                existed_email = md.User.objects.get(email=email)
+            except:
+                existed_email = None
+            if existed_email is not None:
+                error_message = 'email has been used by another user'
                 return render(request, 'register.html', locals())
             if password != password2:
                 error_message = 'passwords are not same!'
                 return render(request, 'register.html', locals())
-            current_user = md.User()
-            current_user.username = user_name
-            current_user.email = email
-            current_user.password = password
-            current_user.save()
+            current_user = md.User.objects.create(
+                username=user_name, email=email, password=password)
             return redirect('/login')
     else:
         register_form = forms.RegisterForm()
@@ -88,18 +98,34 @@ def logout(request):
     return redirect('/login')
 
 
+def orders(request):
+    if 'username' not in request.session:
+        return redirect('/login')
+    user = md.User.objects.get(username=request.session['username'])
+    try:
+        user_packages = md.Package.objects.filter(
+            user=request.session['username'])
+    except:
+        user_packages = None
+    tracking_list = []
+    for package in user_packages:
+        tracking_list.append(package.tracking_id)
+    print(tracking_list)
+    try:
+        pac_items = md.Item.objects.filter(tracking_id__in=tracking_list)
+        print(pac_items)
+    except:
+        pac_items = None
+    return render(request, 'orders.html', locals())
+
+
 def account(request):
     if 'username' not in request.session:
         return redirect('/login')
     user = md.User.objects.get(username=request.session['username'])
-    user_packages = md.Package.objects.filter(
-        user=request.session['username']).count()
-    tracking_list = []
-    for package in user_packages:
-        tracking_list.append(package.tracking_id)
-    pac_items = md.Item.objects.filter(tracking_id__in=tracking_list)
-    return render(request, 'account.html', {'user': user, 'user_packages': user_packages, 'pac_items': pac_items})
-
-
+    packages_num = md.Package.objects.filter(user=user.username).count()
+    delivered_pac = md.Package.objects.filter(
+        user=user.username).filter(status="delivered").count()
+    return render(request, 'account.html', locals())
 # def package_detail(request):
 #     return
