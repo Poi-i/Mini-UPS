@@ -202,7 +202,7 @@ def connect_to_word(truck_num, socket_to_world) -> bool:
     id_to_pos = []
     for i in range(truck_num):
         truck_to_add = msg.trucks.add()
-        truck_to_add.id = i
+        truck_to_add.id = i + 1
         x_ = i
         y_ = i
         truck_to_add.x = x_
@@ -226,6 +226,7 @@ def connect_to_word(truck_num, socket_to_world) -> bool:
             new_truck.x = val[0]
             new_truck.y = val[1]
             new_truck.save()
+            print(str(new_truck) + "saved")
         return world_id, True
     return world_id, False
 
@@ -255,29 +256,29 @@ send ack back to each item in UResponses structs
 def handle_world_send_ack(u_rsp, socket_to_world):
     seqnum_list = []
     for u_finished in u_rsp.completions:
-        print("before u_finished: " + str(seqnum_list) + "\n")
+        print("259 before u_finished: " + str(seqnum_list))
         seqnum_list.append(u_finished.seqnum)
-        print("after u_finished: " + str(seqnum_list) + "\n")
+        print("after u_finished: " + str(seqnum_list))
 
     for u_delivery_made in u_rsp.delivered:
-        print("before u_delivery_made: " + str(seqnum_list) + "\n")
+        print("264 before u_delivery_made: " + str(seqnum_list))
         seqnum_list.append(u_delivery_made.seqnum)
-        print("after u_delivery_made: " + str(seqnum_list) + "\n")
+        print("after u_delivery_made: " + str(seqnum_list))
 
-    for ack_ in u_rsp.acks:
-        print("before ack_: " + str(seqnum_list) + "\n")
-        seqnum_list.append(ack_.seqnum)
-        print("after ack_: " + str(seqnum_list) + "\n")
+    # for ack_ in u_rsp.acks:
+    #     print("before ack_: " + str(seqnum_list) + "\n")
+    #     seqnum_list.append(ack_)
+    #     print("after ack_: " + str(seqnum_list) + "\n")
 
     for trcuk_status in u_rsp.truckstatus:
-        print("before trcuk_status: " + str(seqnum_list) + "\n")
+        print("274 before trcuk_status: " + str(seqnum_list))
         seqnum_list.append(trcuk_status.seqnum)
-        print("after trcuk_status: " + str(seqnum_list) + "\n")
+        print("276 after trcuk_status: " + str(seqnum_list))
 
     for err_ in u_rsp.error:
-        print("before err_: " + str(seqnum_list) + "\n")
+        print("279 before err_: " + str(seqnum_list))
         seqnum_list.append(err_.seqnum)
-        print("after err_: " + str(seqnum_list) + "\n")
+        print("281 after err_: " + str(seqnum_list))
 
     if seqnum_list:
         u_commands = World_UPS.UCommands()
@@ -292,18 +293,22 @@ Handle UFinished
 
 
 def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
+    # save hanlded response from world
+    world_res = md.WorldRes()
+    world_res.seqnum = u_finished.seqnum
+    world_res.save()
     truck_id_ = u_finished.truckid
-    print("World tells truck[" + str(truck_id_) +
-          "]" + " arrived at warehouse" + "\n")
+    print("301 World tells truck[" + str(truck_id_) +
+          "]" + " arrived at warehouse")
     truck_status = u_finished.status
-    print("truck[" + str(truck_id_) + "]'s status: " + truck_status + "\n")
+    print("304 truck[" + str(truck_id_) + "]'s status: " + truck_status + "\n")
     if truck_status == "ARRIVE WAREHOUSE":
         # tell amz truck has arrived
 
         send_arrive = PBwrapper.send_arrive(
             truck_id_, u_finished.x, u_finished.y)
         ua_msg = UA.UAmessage().send_arrive.CopyFrom(send_arrive)
-        print("send to amz: " + ua_msg + "\n")
+        print("send to amz: " + ua_msg)
         # lock on socket?
         write_to_amz(socket_to_amz, ua_msg)
     # renew truck's status
@@ -315,13 +320,23 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
 
 def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
     print(u_delivery_made)
-    package_id = u_delivery_made.packageid
+    # save hanlded response from world
+    world_res = md.WorldRes()
+    world_res.seqnum = u_delivery_made.seqnum
+    world_res.save()
 
+    package_id = u_delivery_made.packageid
+    truck_id = u_delivery_made.truckid
     # update package status
     package = md.Package.objects.get(shipment_id=package_id)
     package.status = "delivered"
     package.save()
 
+    # updeate truck's pac_num
+    truck = md.Truck.objects.get(truckid = truck_id)
+    truck.pac_num -= 1
+    truck.save()
+    
     # tell amz package delievered
     ua_msg = UA.UAmessage()
     ua_msg.UPacDelivered.shipment_id = package_id
@@ -330,10 +345,23 @@ def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
     write_to_amz(socket_to_amz, ua_msg)
 
 
-def isAcked(our_req_seq_num) -> bool:
+def is_acked(our_req_seq_num) -> bool:
     return md.AckedCommand.objects.filter(seqnum=our_req_seq_num).exists()
 
+def res_handled(world_res_seq_num) -> bool:
+    return md.WorldRes.objects.filter(seqnum=world_res_seq_num).exists()
+
 def handle_world_truck_status(truck_status, socket_to_world, socket_to_amz):
+    # save hanlded response from world
+    world_res = md.WorldRes()
+    world_res.seqnum = truck_status.seqnum
+    world_res.save()
+
+    truck = md.Truck.objects.get(truckid=truck_status.truckid)
+    truck.status = truck_status.status
+    truck.x = truck_status.x
+    truck.y = truck_status.y
+    truck.save()
     return
 
 
@@ -345,18 +373,19 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
     for u_finished in u_rsp.completions:
         # renew truck's status
         # tell amz truck has arrived
-        handle_world_finished(u_finished, socket_to_world, socket_to_amz)
-
+        if not res_handled(u_finished.seqnum):
+            handle_world_finished(u_finished, socket_to_world, socket_to_amz)
     for u_delivery_made in u_rsp.delivered:
         # renew truck's status
         # renew package's status -> delivered
-        handle_world_delievered(
-            u_delivery_made, socket_to_world, socket_to_amz)
+        if not res_handled(u_delivery_made.seqnum):
+            handle_world_delievered(
+                u_delivery_made, socket_to_world, socket_to_amz)
 
     for ack_ in u_rsp.acks:
         # terminate the request from our side, where ack = seqnum of our req
         print("ack_: " + str(ack_) + "\n")
-        if isAcked(ack_):
+        if is_acked(ack_):
             continue
         print("saving acked num: " + str(ack_) + "\n")
         acked_command = md.AckedCommand()
@@ -365,7 +394,8 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
         print("saved\n")
     
     for truck_status in u_rsp.truckstatus:
-        handle_world_truck_status(truck_status, socket_to_world, socket_to_amz)
+        if not res_handled(truck_status.seqnum):
+            handle_world_truck_status(truck_status, socket_to_world, socket_to_amz)
 
     for err_ in u_rsp.error:
         print(err_)
@@ -381,13 +411,18 @@ def pick_truck(wh_id):
         # check whether already exist truck on the way to the WH
             assigned_truck = md.AssignedTruck.objects.filter(whid=wh_id).first()
             if assigned_truck:
-                return assigned_truck.truckid
+                return assigned_truck.truckid.truckid
             # sort the result sorted from IDLE to DELIVERING, pick the 1st one
             truck = md.Truck.objects.filter(Q(status='IDLE') | Q(
                 status='DELIVERING')).order_by('-status').first()
             print(truck)
             if truck:
                 print("the picked truck is:" + str(truck))
+                 # update truck status to Traveling
+                print("truck to update: " + str(truck))
+                truck.status='TRAVELING'
+                truck.save()
+                print(str(truck) + " save successfully")
                 return truck.truckid
             else:
                 # if no truck meet requirement, wait for 5s and try again
@@ -404,13 +439,16 @@ verify the validation of ups username from Amazon
 
 
 def verify_user(username, package):
-    user = md.User.objects.filter(name=username)
+    print("442 start to verify user: " + str(username))
+    user = md.User.objects.filter(username=username)
     if user != None:
         # update package's username
+        print(username + "in our db")
         package.user = username
         package.save()
         print("updated package = " + package)
         return True
+    print(username + "is not in our db")
     return False
 
 
@@ -429,18 +467,12 @@ def w_pickup(truck_id, wh_id, socket_to_world):
         go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum_)
         print("send go_pickup = " + str(go_pickup))
         # send UCommands(UGoPickup) to World
-        while not isAcked(seqnum_):
+        while not is_acked(seqnum_):
             u_commands = World_UPS.UCommands()
             u_commands.pickups.append(go_pickup)
             print("send to world: " + str(u_commands) + "\n")
             write_to_world(socket_to_world, u_commands)
             time.sleep(1)
-        # update truck status to Traveling
-        truck = md.Truck.objects.filter(truckid=truck_id).first()
-        print("truck to update: " + str(truck))
-        truck.status='TRAVELING'
-        truck.save()
-        print(str(truck) + " save successfully")
     except Exception as ex:
         print(ex)
 
@@ -451,21 +483,32 @@ handle Amazon part for handle_amz_pickup
 
 
 def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
-    ship_id = pickup.shipment_id
-    # insert into DB: Package
-    package = md.Package.objects.create(
-        shipment_id=ship_id, truckid=truck_id, x=pickup.x, y=pickup.y, status='in WH')
-    # update package with username if valid
-    if pickup.HasField("ups_username"):
-        is_binded = verify_user(pickup.ups_username, package)
-    pac_pickup_res = PBwrapper.pac_pickup_res(
-        package.tracking_id, is_binded, ship_id, truck_id)
+    try:
+        ship_id = pickup.shipment_id
+        # insert into DB: Package
+        print("488 inserting package " + str(ship_id))
+        truck = md.Truck.objects.get(truckid=truck_id)
+        package = md.Package()
+        package.shipment_id=ship_id
+        package.truckid=truck
+        package.x=pickup.x
+        package.y=pickup.y
+        package.status='in WH'
+        package.save()
+        print()
+        # update package with username if valid
+        if pickup.HasField("ups_username"):
+            is_binded = verify_user(pickup.ups_username, package)
+        pac_pickup_res = PBwrapper.pac_pickup_res(
+            package.tracking_id, is_binded, ship_id, truck_id)
 
-    print("send pac_pickup_res = " + pac_pickup_res)
+        print("501 send pac_pickup_res = " + str(pac_pickup_res))
 
-    # send response to Amazon
-    write_to_amz(socket_to_amz, UA.UAmessage(
-    ).pickup_res.CopyFrom(pac_pickup_res))
+        # send response to Amazon
+        write_to_amz(socket_to_amz, UA.UAmessage(
+        ).pickup_res.CopyFrom(pac_pickup_res))
+    except Exception as ex:
+        print(ex)
 
 
 '''
@@ -516,12 +559,15 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
                 id=item.id, description=item.description, count=item.count, tracking_id=track_id)
             print("insert item: " + item)
         pac_list.append(PBwrapper.gene_package(ship_id, package.x, package.y))
-
+    # update the pac_num of loaded truck
+    truck = md.Truck.objects.get(truckid=all_loaded.truck_id)
+    truck.pac_num += len(pac_list)
+    truck.save()
     # global seqnum  # TODO: atomically increase seqnum += 1
     # send Ucommands(UGoDeliver) to World
     seqnum_ = get_seqnum()
     go_deliver = PBwrapper.go_deliver(all_loaded.truck_id, pac_list, seqnum_)
-    while not isAcked(seqnum_):
+    while not is_acked(seqnum_):
         write_to_world(socket_to_world,
                     World_UPS.UCommands().deliveries.append(go_deliver))
         time.sleep(1)
@@ -578,22 +624,21 @@ def a_worldid(socket_to_amz, worldid):
 def main():
     if len(sys.argv) < 3:
         print(
-            "Usage: python3 hello_world_amz.py create [truck_num] for create new world" + "\n")
+            "Usage: python3 hello_world_amz.py create [truck_num] for create new world")
         print(
-            "Usage: python3 hello_world_amz.py reconnect [world_id] for create new world" + "\n")
+            "Usage: python3 hello_world_amz.py reconnect [world_id] for create new world")
         sys.exit(1)
     world_id = None
     # socket_to_world = None
     # socket_to_amz = None
     socket_to_world = get_socket_to_world()
-    socket_to_amz = get_socket_to_amz()
     # send connect/reconnect to world
     retry = 5
     if sys.argv[1] == 'create':
         truck_num = int(sys.argv[2])
-        print("# of trucks to create: " + str(truck_num) + "\n")
+        print("# of trucks to create: " + str(truck_num))
         if truck_num <= 0:
-            print("# of trucks should be positive\n")
+            print("# of trucks should be positive")
             sys.exit(1)
         world_id, is_connected = connect_to_word(truck_num, socket_to_world)
         while retry and not is_connected:
@@ -620,7 +665,8 @@ def main():
     if not retry:
         print("Failed to conenct the world" + "\n")
         sys.exit()
-
+    
+    socket_to_amz = get_socket_to_amz()
     # send the world_id to amz
     a_worldid(socket_to_amz, world_id)
     # start one thread to dock amz
