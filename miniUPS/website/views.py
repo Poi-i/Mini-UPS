@@ -6,8 +6,9 @@ from django.conf import settings  # 将settings的内容引进
 
 
 def index(request):
-    if 'username' not in request.session:
-        return redirect('/login')
+    is_login = False
+    if 'username' in request.session:
+        is_login = True
     if (request.method == 'POST'):
         track_form = forms.TrackForm(request.POST)
         if track_form.is_valid():
@@ -20,15 +21,12 @@ def index(request):
                 error_message = 'The tracking number you entered is not valid. Please try again.'
                 return render(request, 'index.html', locals())
             return redirect('website:track', id=package.tracking_id)
-
     else:
         track_form = forms.TrackForm()
     return render(request, 'index.html', locals())
 
 
 def track(request, id):
-    if 'username' not in request.session:
-        return redirect('/login')
     package = get_object_or_404(md.Package, tracking_id=id)
     return render(request, 'track.html', locals())
 
@@ -95,7 +93,7 @@ def logout(request):
         del request.session['username']
     except KeyError:
         pass
-    return redirect('/login')
+    return redirect('/index')
 
 
 def orders(request):

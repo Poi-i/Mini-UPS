@@ -78,9 +78,11 @@
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'website:index' %}">UPS Service</a>
               </li>
+              {% if is_login%}
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'website:orders' %}">Orders</a>
               </li>
+              {%endif%}
             </ul>
             <!-- Left links -->
 
@@ -92,9 +94,13 @@
                     </button>
                     
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-                        <li><a class="dropdown-item" href="{% url 'website:account' %}">My Profile</a></li>
-                        {% comment %} <li><a class="dropdown-item" href="{% url 'website:edit_profile' %}">Edit Profile</a></li> {% endcomment %}
-                        <li><a class="dropdown-item" href="{% url 'website:logout' %}">Log out</a></li>
+                        {% if is_login%}
+                          <li><a class="dropdown-item" href="{% url 'website:account' %}">My Profile</a></li>
+                          {% comment %} <li><a class="dropdown-item" href="{% url 'website:edit_profile' %}">Edit Profile</a></li> {% endcomment %}
+                          <li><a class="dropdown-item" href="{% url 'website:logout' %}">Log out</a></li>
+                        {% else %}
+                          <li><a class="dropdown-item" href="{% url 'website:login' %}">Login</a></li>
+                        {%endif%}
                     </ul>
                 </div>
             </div>

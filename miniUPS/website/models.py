@@ -31,7 +31,7 @@ class Truck(models.Model):
     pac_num = models.IntegerField(null=False, default=0)
 
     def __str__(self):
-        return "truckid = " + str(self.truckid) + " status = " + self.status
+        return "truckid = " + str(self.truckid) + " status = " + self.status + " pac_num = " + str(self.pac_num)
 
 
 class Package(models.Model):

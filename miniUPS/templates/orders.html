@@ -44,9 +44,11 @@
                     <li class="nav-item">
                       <a class="nav-link" href="{% url 'website:index' %}">UPS Service</a>
                     </li>
+                    {% if is_login%}
                     <li class="nav-item">
                       <a class="nav-link" href="{% url 'website:orders' %}">Orders</a>
                     </li>
+                    {%endif%}
                   </ul>
                   <!-- Left links -->
       

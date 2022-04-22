@@ -215,7 +215,7 @@ def connect_to_word(truck_num, socket_to_world) -> bool:
     uconnected = World_UPS.UConnected()
     uconnected.ParseFromString(uconnected_str)
     print("world id: " + str(uconnected.worldid))
-    print("result: " + uconnected.result)
+    print("result: " + str(uconnected.result))
     world_id = uconnected.worldid
     if uconnected.result == "connected!":
         print("connect to world " + str(world_id) + " successfully\n")
@@ -301,48 +301,57 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
     print("301 World tells truck[" + str(truck_id_) +
           "]" + " arrived at warehouse")
     truck_status = u_finished.status
-    print("304 truck[" + str(truck_id_) + "]'s status: " + truck_status + "\n")
-    if truck_status == "ARRIVE WAREHOUSE":
-        # tell amz truck has arrived
-
-        send_arrive = PBwrapper.send_arrive(
-            truck_id_, u_finished.x, u_finished.y)
-        ua_msg = UA.UAmessage().send_arrive.CopyFrom(send_arrive)
-        print("send to amz: " + ua_msg)
-        # lock on socket?
-        write_to_amz(socket_to_amz, ua_msg)
+    print("304 truck[" + str(truck_id_) + "]'s status: " + truck_status)
     # renew truck's status
     # lock on row?
-    truck = md.Truck.objects.get(truckid=truck_id_)
+    truck = md.Truck.objects.filter(truckid=truck_id_).first()
     truck.status = truck_status
     truck.save()
+    if truck_status == "ARRIVE WAREHOUSE":
+        try:
+            # tell amz truck has arrived
+            send_arrive = PBwrapper.send_arrive(
+                truck_id_, u_finished.x, u_finished.y)
+            ua_msg = UA.UAmessage()
+            ua_msg.send_arrive.CopyFrom(send_arrive)
+            print("317 send to amz: " + str(ua_msg))
+            # lock on socket?
+            write_to_amz(socket_to_amz, ua_msg)
+            truck.status = "LOADING"
+            truck.save()
+        except Exception as ex:
+            print(ex)
+    
 
 
 def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
-    print(u_delivery_made)
-    # save hanlded response from world
-    world_res = md.WorldRes()
-    world_res.seqnum = u_delivery_made.seqnum
-    world_res.save()
+    try:
+        print("326 " + str(u_delivery_made))
+        # save hanlded response from world
+        world_res = md.WorldRes()
+        world_res.seqnum = u_delivery_made.seqnum
+        world_res.save()
 
-    package_id = u_delivery_made.packageid
-    truck_id = u_delivery_made.truckid
-    # update package status
-    package = md.Package.objects.get(shipment_id=package_id)
-    package.status = "delivered"
-    package.save()
+        package_id = u_delivery_made.packageid
+        truck_id = u_delivery_made.truckid
+        # update package status
+        package = md.Package.objects.filter(shipment_id=package_id).first()
+        package.status = "delivered"
+        package.save()
 
-    # updeate truck's pac_num
-    truck = md.Truck.objects.get(truckid = truck_id)
-    truck.pac_num -= 1
-    truck.save()
-    
-    # tell amz package delievered
-    ua_msg = UA.UAmessage()
-    ua_msg.UPacDelivered.shipment_id = package_id
-    print("send to amz: " + ua_msg + "\n")
-    # lock on socket?
-    write_to_amz(socket_to_amz, ua_msg)
+        # updeate truck's pac_num
+        truck = md.Truck.objects.filter(truckid = truck_id).first()
+        truck.pac_num -= 1
+        truck.save()
+        
+        # tell amz package delievered
+        ua_msg = UA.UAmessage()
+        ua_msg.pac_delivered.shipment_id = package_id
+        print("347 send to amz: " + str(ua_msg))
+        # lock on socket?
+        write_to_amz(socket_to_amz, ua_msg)
+    except Exception as ex:
+        print(ex)
 
 
 def is_acked(our_req_seq_num) -> bool:
@@ -357,7 +366,7 @@ def handle_world_truck_status(truck_status, socket_to_world, socket_to_amz):
     world_res.seqnum = truck_status.seqnum
     world_res.save()
 
-    truck = md.Truck.objects.get(truckid=truck_status.truckid)
+    truck = md.Truck.objects.filter(truckid=truck_status.truckid).first()
     truck.status = truck_status.status
     truck.x = truck_status.x
     truck.y = truck_status.y
@@ -440,15 +449,15 @@ verify the validation of ups username from Amazon
 
 def verify_user(username, package):
     print("442 start to verify user: " + str(username))
-    user = md.User.objects.filter(username=username)
-    if user != None:
+    user = md.User.objects.filter(username=username).first()
+    if user:
         # update package's username
-        print(username + "in our db")
-        package.user = username
+        print("453 " + username + " in our db")
+        package.user = user
         package.save()
-        print("updated package = " + package)
+        print("449 updated package = " + str(package))
         return True
-    print(username + "is not in our db")
+    print("451 " + username + "is not in our db")
     return False
 
 
@@ -457,20 +466,22 @@ handle World part for handle_amz_pickup
 '''
 
 
-def w_pickup(truck_id, wh_id, socket_to_world):
-    print("constructing pickup ins to world...")
+def w_a_pickup(truck_id, wh_id, pickup, socket_to_world, socket_to_amz):
+    print("461 constructing pickup ins to world...")
     # insert into DB: AssignedTruck
     try:
         md.AssignedTruck.objects.create(whid=wh_id, truckid=md.Truck.objects.filter(truckid=truck_id).first())
-        # global seqnum  # TODO: atomically increase seqnum += 1
+        # global seqnum atomically increase seqnum += 1
         seqnum_ = get_seqnum()
         go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum_)
-        print("send go_pickup = " + str(go_pickup))
+        print("468 send go_pickup = " + str(go_pickup))
+        # send pickup response to amazon 
+        a_pickup(truck_id, pickup, socket_to_amz)
         # send UCommands(UGoPickup) to World
         while not is_acked(seqnum_):
             u_commands = World_UPS.UCommands()
             u_commands.pickups.append(go_pickup)
-            print("send to world: " + str(u_commands) + "\n")
+            print("473 send to world: " + str(u_commands))
             write_to_world(socket_to_world, u_commands)
             time.sleep(1)
     except Exception as ex:
@@ -486,8 +497,8 @@ def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
     try:
         ship_id = pickup.shipment_id
         # insert into DB: Package
-        print("488 inserting package " + str(ship_id))
-        truck = md.Truck.objects.get(truckid=truck_id)
+        print("489 inserting package " + str(ship_id))
+        truck = md.Truck.objects.filter(truckid=truck_id).first()
         package = md.Package()
         package.shipment_id=ship_id
         package.truckid=truck
@@ -502,11 +513,11 @@ def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
         pac_pickup_res = PBwrapper.pac_pickup_res(
             package.tracking_id, is_binded, ship_id, truck_id)
 
-        print("501 send pac_pickup_res = " + str(pac_pickup_res))
-
+        print("505 send pac_pickup_res = " + str(pac_pickup_res))
         # send response to Amazon
-        write_to_amz(socket_to_amz, UA.UAmessage(
-        ).pickup_res.CopyFrom(pac_pickup_res))
+        ua_msg = UA.UAmessage()
+        ua_msg.pickup_res.CopyFrom(pac_pickup_res)
+        write_to_amz(socket_to_amz, ua_msg)
     except Exception as ex:
         print(ex)
 
@@ -524,15 +535,13 @@ def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
 
 def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
 
-    print("received APacPickup = " + str(pickup))
+    print("528 received APacPickup = " + str(pickup))
     wh_id = pickup.whid
     # pick an idle or delivering truck to pickup
     truck_id = pick_truck(wh_id)
 
     # World part
-    w_pickup(truck_id, wh_id, socket_to_world)
-    # Amazon part
-    a_pickup(truck_id, pickup, socket_to_amz)
+    w_a_pickup(truck_id, wh_id, pickup, socket_to_world, socket_to_amz)
     return
 
 
@@ -548,30 +557,38 @@ def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
 
 def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
     # parse ASendAllLoaded, insert into db: Package
-    pac_list = []
-    for package in all_loaded.packages:
-        ship_id = package.shipment_id
-        track_id = md.Package.objects.filter(
-            shipment_id=ship_id).tracking_id
-        for item in package.items:
-            # insert into Product
-            item = md.Item.objects.create(
-                id=item.id, description=item.description, count=item.count, tracking_id=track_id)
-            print("insert item: " + item)
-        pac_list.append(PBwrapper.gene_package(ship_id, package.x, package.y))
-    # update the pac_num of loaded truck
-    truck = md.Truck.objects.get(truckid=all_loaded.truck_id)
-    truck.pac_num += len(pac_list)
-    truck.save()
-    # global seqnum  # TODO: atomically increase seqnum += 1
-    # send Ucommands(UGoDeliver) to World
-    seqnum_ = get_seqnum()
-    go_deliver = PBwrapper.go_deliver(all_loaded.truck_id, pac_list, seqnum_)
-    while not is_acked(seqnum_):
-        write_to_world(socket_to_world,
-                    World_UPS.UCommands().deliveries.append(go_deliver))
-        time.sleep(1)
-    return
+    print("555 handling all_loaded")
+    try:
+        pac_list = []
+        for package in all_loaded.packages:
+            ship_id = package.shipment_id
+            track = md.Package.objects.filter(shipment_id=ship_id).first()
+            print("561 process pack: " + str(package))
+            for item in package.items:
+                print("563 process item: " + str(item))
+                # insert into Product
+                item_ = md.Item.objects.create(id=item.product_id, description=item.description, count=item.count, tracking_id=track)
+                print("566 inserted item: " + str(item))
+            pac_list.append(PBwrapper.gene_package(ship_id, package.x, package.y))
+        # update the pac_num of loaded truck, change status back to AW
+        print("569 update the pac_num of loaded truck " + str(all_loaded.truck_id))
+        truck = md.Truck.objects.filter(truckid=all_loaded.truck_id).first()
+        truck.status = "ARRIVE WAREHOUSE"
+        truck.pac_num += len(pac_list)
+        truck.save()
+        print("573 " + str(truck) + " saved")
+        # global seqnum atomically increase 
+        # send Ucommands(UGoDeliver) to World
+        seqnum_ = get_seqnum()
+        go_deliver = PBwrapper.go_deliver(all_loaded.truck_id, pac_list, seqnum_)
+        while not is_acked(seqnum_):
+            u_commands = World_UPS.UCommands()
+            u_commands.deliveries.append(go_deliver)
+            write_to_world(socket_to_world, u_commands)
+            time.sleep(1)
+        return
+    except Exception as ex:
+        print(ex)
 
 
 '''
@@ -584,14 +601,22 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
 
 
 def handle_amz_bindups(bind_upsuser: UA.ABindUpsUser, socket_to_world, socket_to_amz):
-    ship_id = bind_upsuser.shipment_id
-    package = md.Package.objects.filter(shipment_id=ship_id)
-    # verify user validaty, update package is valid
-    bind_res = PBwrapper.bind_res(
-        ship_id, verify_user(bind_upsuser.ups_username, package))
-    # send response to Amazon
-    write_to_amz(socket_to_amz, UA.UAmessage.bind_res.CopyFrom(bind_res))
-    return
+    try:
+        print("bind_upsuser: " + str(bind_upsuser))
+        print("603 start to rebinding user")
+        ship_id = bind_upsuser.shipment_id
+        package = md.Package.objects.filter(shipment_id=ship_id).first()
+        # verify user validaty, update package is valid
+        is_binded = verify_user(bind_upsuser.ups_username, package)
+        bind_res = PBwrapper.bind_res(ship_id, is_binded)
+        # send response to Amazon
+        ua_msg = UA.UAmessage()
+        ua_msg.bind_res.CopyFrom(bind_res)
+        print("598 sending bind res " + str(ua_msg) + " to amz")
+        write_to_amz(socket_to_amz, ua_msg)
+        return
+    except Exception as ex:
+        print(ex)
 
 
 def handle_amz(au_msg: UA.AUmessage, socket_to_world, socket_to_amz):

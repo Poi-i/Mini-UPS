@@ -119,3 +119,4 @@ dmypy.json
 .pyre/
 
 server_*
+migrations
