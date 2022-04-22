@@ -124,11 +124,27 @@
     <div class="container">                      
         <div class="row text-center justify-content-center mb-5">
             <div class="col-xl-6 col-lg-8">
-                <h2 class="font-weight-bold", style="margin-top: 100px">Package {{package.tracking_id}}</h2>
-                {% comment %} <p class="text-muted">We’re very proud of the path we’ve taken. Explore the history that made us the company we are today.</p> {% endcomment %}
-            </div>
+                <h2 class="font-weight-bold", style="margin-top: 50px">Package {{package.tracking_id}}</h2>
+             </div>
         </div>
-    
+        <div class="row text-center justify-content-center mb-5">
+            {% if message %}
+                <div class="alert alert-primary" data-dismiss="alert">
+                    {{message}}
+                </div>
+            {% endif %}
+            {% if package.user != username%}
+                <form class="mx-1 mx-md-4 input-group" action="{% url 'website:track' %}" method="post">
+                    <div class="d-grid gap-3 col-4 mx-auto">
+                        <button class="btn btn-primary" type="submit" >Bind this package</button>
+                    </div>
+                </form>
+            {% else %}
+                <div class="d-grid gap-3 col-4 mx-auto">
+                    <button class="btn btn-primary" type="button" disabled>Bind this package</button>
+                </div>
+            {% endif %}
+        </div>
         <div class="row">
             <div class="col">
                 <div class="timeline-steps aos-init aos-animate" data-aos="fade-up">

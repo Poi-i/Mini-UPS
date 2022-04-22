@@ -1,3 +1,4 @@
+from email import message
 from django.shortcuts import redirect, render, get_object_or_404
 from django.http import HttpResponse
 from . import forms
@@ -29,8 +30,19 @@ def index(request):
 def track(request, id):
     if 'username' not in request.session:
         return redirect('/login')
+    username = request.session["username"]
     package = get_object_or_404(md.Package, tracking_id=id)
+    if request.method == 'POST':
+        # package_form = forms.PackageForm(request.POST)
+        package.user = username
+        package.save()
+        message = 'package successfully binded!'
     return render(request, 'track.html', locals())
+
+
+def bind(request):
+    if 'username' not in request.session:
+        return redirect('/login')
 
 
 def register(request):

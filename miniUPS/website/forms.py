@@ -31,3 +31,7 @@ class TrackForm(forms.Form):
     #     if len(filter_result) <= 0:
     #         raise forms.ValidationError(
     #             "The tracking number you entered is not valid.")
+
+
+# class PackageForm(forms.Form):
+#     package_user = forms.CharField(abel='bind username', required=True)
