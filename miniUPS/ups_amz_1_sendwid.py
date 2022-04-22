@@ -16,21 +16,22 @@ try:
     ua_msg.ParseFromString(msg_str)
     print("recv from ups: " + str(ua_msg))
 
-    # ip_port_world = ('vcm-26474.vm.duke.edu', 23456)
-    # socket_amz_w = socket_amz_w.connect(ip_port_world)
-    # a_connect = World_AMZ.AConnect()
-    # a_connect.worldid = ua_msg.world_id.world_id
-    # a_connect.isAmazon = True
-    # wh_1 = World_AMZ.AInitWarehouse()
-    # wh_1.id = 1
-    # wh_1.x = 8
-    # wh_1.y = 7
-    # a_connect.initwh.extend(wh_1)
-    # write_msg()
+    ua_msg = UA.AUmessage()
+    ua_msg.pickup.whid = 1
+    ua_msg.pickup.shipment_id = 1
+    ua_msg.pickup.x = 5
+    ua_msg.pickup.y = 6
+    write_msg(socket_to_ups, ua_msg)
+    msg_str, _ = recv_msg(socket_to_ups)
+    ua_msg = UA.UAmessage()
+    ua_msg.ParseFromString(msg_str)
+    print("recv from ups: " + str(ua_msg))
 
-    # err_msg = "{}"
-    # socket_to_ups.send(err_msg.encode())
-
-finally:
+    while True:
+        continue
+except:
     socket_to_ups.close()
+    print("socket_to_ups close")
+finally:
+    # socket_to_ups.close()
     print("socket_to_ups close")
