@@ -17,6 +17,7 @@ urlpatterns = [
     path('orders/', views.orders, name='orders'),
     path('change_dest/<int:package_id>/<int:truck_id>',
          views.change_dest, name='change_dest'),
+    path('resend/<int:package_id>', views.resend, name='resend'),
     # path('account/package/', views.package_detail, name='package_detail'),
 ]
 

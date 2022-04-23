@@ -703,19 +703,34 @@ def handle_frontend(frontend, socket_to_world, socket_to_amz):
     try:
         while True:
             data = frontend.recv(1024)
-            if data <= 0:
+            if len(data) <= 0:
                 frontend.close()
                 return
             data = data.decode()
             info = data.split(",")
-            print("710 recv from frontend: " + str(info)) # truckid,packageid,x,y
-            pack = md.Package.objects.get(int(info[1]))
-            if pack.status == "delivering" or pack.status == "dilivered":
-                return
-            pack.x = int(info[2])
-            pack.y = int(info[3])
-            pack.save()
-            
+            print("710 recv from frontend: " + str(info))
+            if info[0] == "change": # change,truckid,packageid,x,y
+                truck_id = int(info[1])
+                package_id = int(info[2])
+                x_= int(info[3])
+                y_ = int(info[4])
+                pack = md.Package.objects.get(shipment_id=package_id)
+                if pack.status == "delivering" or pack.status == "dilivered":
+                    return
+                print("720 Pack to edit: " + str(720))
+                pack.x = x_
+                pack.y = y_
+                pack.save()
+                print(str(pack) + " saved")
+            elif info[0] == "resend": # resend, ship_id
+                ship_id = int(info[1])
+                ua_msg = UA.UAmessage()
+                ua_msg.resend_package.shipment_id = ship_id
+                print("729 sent to amz: " + str(ua_msg))
+                write_to_amz(socket_to_amz, ua_msg)
+                pass
+            else:
+                print("I cannot understand")
     except Exception as ex:
         print(ex)
 
@@ -771,14 +786,14 @@ def main():
         # start one thread to dock amz
         t_to_amz = Thread(target=dock_amz, args=(
             socket_to_world, socket_to_amz))
-
         # start one thread to dock world
         t_to_world = Thread(target=dock_world, args=(
             socket_to_world, socket_to_amz))
-
+        
         t_to_frontend = Thread(target=dock_frontend, args=(
-            socket_to_world, socket_to_amz), daemon=True)
-        print("Is t_to_front set as Daemon? " + t_to_frontend.isDaemon())
+            socket_to_world, socket_to_amz))
+        t_to_frontend.setDaemon(True)
+        print("Is t_to_front set as Daemon? " + str(t_to_frontend.isDaemon()))
         t_to_frontend.start()
         t_to_world.start()
         t_to_amz.start()
