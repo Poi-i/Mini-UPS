@@ -112,7 +112,8 @@
                   <button class="btn btn-outline-danger" type="submit" onclick="location.href='{% url 'website:change_dest' package_id=package.shipment_id truck_id=package.truckid.truckid%}'">
                     Change
                   </button> 
-              {%else%}
+              {% elif package.status == 'delivered' %}
+              {% else %}
               <button class="btn btn-outline-danger" disabled>
                 Change
               </button>
