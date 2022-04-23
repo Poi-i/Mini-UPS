@@ -15,6 +15,8 @@ urlpatterns = [
     path('logout/', views.logout, name='logout'),
     path('account/', views.account, name='account'),
     path('orders/', views.orders, name='orders'),
+    path('change_dest/<int:package_id>/<int:truck_id>',
+         views.change_dest, name='change_dest'),
     # path('account/package/', views.package_detail, name='package_detail'),
 ]
 

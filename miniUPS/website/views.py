@@ -1,4 +1,5 @@
 from email import message
+from socket import socket
 from django.shortcuts import redirect, render, get_object_or_404
 from django.http import HttpResponse
 from . import forms
@@ -28,6 +29,9 @@ def index(request):
 
 
 def track(request, id):
+    is_login = False
+    if 'username' in request.session:
+        is_login = True
     package = get_object_or_404(md.Package, tracking_id=id)
     if request.method == 'POST':
         # package_form = forms.PackageForm(request.POST)
@@ -103,29 +107,53 @@ def logout(request):
     return redirect('/index')
 
 
-def orders(request):
+def change_dest(request, package_id, truck_id):
+    is_login = True
     if 'username' not in request.session:
+        is_login = False
+        return redirect('/login')
+    if request.method == 'POST':
+        dest_form = forms.DestAddrForm(request.POST)
+        if dest_form.is_valid():
+            x = dest_form.cleaned_data['x']
+            y = dest_form.cleaned_data['y']
+            msg = str(truck_id) + ',' + str(package_id) + \
+                ',' + str(x) + ',' + str(y) + '\n'
+            # send the change dest addr requst to back end
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.connect(('127.0.0.1', 8888))
+            client.send(msg.encode('utf-8'))
+            return redirect('/orders')
+    else:
+        dest_form = forms.DestAddrForm()
+    return render(request, 'change_dest.html', locals())
+
+
+def orders(request):
+    is_login = True
+    if 'username' not in request.session:
+        is_login = False
         return redirect('/login')
     user = md.User.objects.get(username=request.session['username'])
     try:
         user_packages = md.Package.objects.filter(
-            user=request.session['username'])
+            user=request.session['username']).order_by('tracking_id')
     except:
         user_packages = None
     tracking_list = []
     for package in user_packages:
         tracking_list.append(package.tracking_id)
-    print(tracking_list)
     try:
         pac_items = md.Item.objects.filter(tracking_id__in=tracking_list)
-        print(pac_items)
     except:
         pac_items = None
     return render(request, 'orders.html', locals())
 
 
 def account(request):
+    is_login = True
     if 'username' not in request.session:
+        is_login = False
         return redirect('/login')
     user = md.User.objects.get(username=request.session['username'])
     packages_num = md.Package.objects.filter(user=user.username).count()
