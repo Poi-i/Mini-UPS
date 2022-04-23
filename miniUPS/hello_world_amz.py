@@ -299,7 +299,7 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
     world_res.save()
     truck_id_ = u_finished.truckid
     print("301 World tells truck[" + str(truck_id_) +
-          "]" + " arrived at warehouse")
+          "]: " + str(u_finished.status))
     truck_status = u_finished.status
     print("304 truck[" + str(truck_id_) + "]'s status: " + truck_status)
     # renew truck's status
@@ -317,8 +317,14 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
             print("317 send to amz: " + str(ua_msg))
             # lock on socket?
             write_to_amz(socket_to_amz, ua_msg)
+            # update truck & package status to loading
             truck.status = "LOADING"
             truck.save()
+            packages = md.Package.objects.filter(truckid=truck.truckid).filter(status="in WH")
+            if packages:
+                for package in packages:
+                    package.status = "loading"
+                    package.save()  
         except Exception as ex:
             print(ex)
     
@@ -336,18 +342,22 @@ def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
         truck_id = u_delivery_made.truckid
         # update package status
         package = md.Package.objects.filter(shipment_id=package_id).first()
+        print("345 to set as delievered: " + str(package))
         package.status = "delivered"
         package.save()
+        print(str(package) + " saved")
 
-        # updeate truck's pac_num
+        # update truck's pac_num
         truck = md.Truck.objects.filter(truckid = truck_id).first()
+        print("352 to decrease pac_num: " + str(truck))
         truck.pac_num -= 1
         truck.save()
-        
+        print(str(truck) + " saved")
+
         # tell amz package delievered
         ua_msg = UA.UAmessage()
         ua_msg.pac_delivered.shipment_id = package_id
-        print("347 send to amz: " + str(ua_msg))
+        print("360 send to amz: " + str(ua_msg))
         # lock on socket?
         write_to_amz(socket_to_amz, ua_msg)
     except Exception as ex:
@@ -415,6 +425,8 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
 
 def pick_truck(wh_id):
     print("start to select truck")
+    # avoid race condition on picking the same truck
+    lock.acquire()
     while True:
         try:
         # check whether already exist truck on the way to the WH
@@ -439,6 +451,8 @@ def pick_truck(wh_id):
                 continue
         except Exception as ex:
             print(ex)
+        finally:
+            lock.release()
 
 
 '''
@@ -468,22 +482,26 @@ handle World part for handle_amz_pickup
 
 def w_a_pickup(truck_id, wh_id, pickup, socket_to_world, socket_to_amz):
     print("461 constructing pickup ins to world...")
-    # insert into DB: AssignedTruck
     try:
-        md.AssignedTruck.objects.create(whid=wh_id, truckid=md.Truck.objects.filter(truckid=truck_id).first())
+        # insert into DB: AssignedTrucks
+        truck, not_assigned = md.AssignedTruck.objects.get_or_create(whid=wh_id, truckid=md.Truck.objects.filter(truckid=truck_id).first())
         # global seqnum atomically increase seqnum += 1
         seqnum_ = get_seqnum()
-        go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum_)
-        print("468 send go_pickup = " + str(go_pickup))
+        go_pickup = None
+        # only send world UGoPickUp with a not_assigned truck
+        if not_assigned:
+            go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum_)
+            print("468 send go_pickup = " + str(go_pickup))
         # send pickup response to amazon 
         a_pickup(truck_id, pickup, socket_to_amz)
         # send UCommands(UGoPickup) to World
-        while not is_acked(seqnum_):
-            u_commands = World_UPS.UCommands()
-            u_commands.pickups.append(go_pickup)
-            print("473 send to world: " + str(u_commands))
-            write_to_world(socket_to_world, u_commands)
-            time.sleep(1)
+        if not_assigned:
+            while not is_acked(seqnum_):
+                u_commands = World_UPS.UCommands()
+                u_commands.pickups.append(go_pickup)
+                print("473 send to world: " + str(u_commands))
+                write_to_world(socket_to_world, u_commands)
+                time.sleep(1)
     except Exception as ex:
         print(ex)
 
@@ -497,7 +515,7 @@ def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
     try:
         ship_id = pickup.shipment_id
         # insert into DB: Package
-        print("489 inserting package " + str(ship_id))
+        print("500 inserting package " + str(ship_id))
         truck = md.Truck.objects.filter(truckid=truck_id).first()
         package = md.Package()
         package.shipment_id=ship_id
@@ -557,26 +575,32 @@ def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
 
 def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket_to_amz):
     # parse ASendAllLoaded, insert into db: Package
-    print("555 handling all_loaded")
+    print("570 handling all_loaded")
     try:
         pac_list = []
         for package in all_loaded.packages:
             ship_id = package.shipment_id
-            track = md.Package.objects.filter(shipment_id=ship_id).first()
-            print("561 process pack: " + str(package))
+            print("ship_id of the package: " + str(ship_id))
+            track = md.Package.objects.get(shipment_id=ship_id)
+            print("576 process pack: " + str(package))
+            print(str(track))
             for item in package.items:
                 print("563 process item: " + str(item))
-                # insert into Product
+                # insert into fProduct
                 item_ = md.Item.objects.create(id=item.product_id, description=item.description, count=item.count, tracking_id=track)
-                print("566 inserted item: " + str(item))
+                print("581 inserted item: " + str(item))
             pac_list.append(PBwrapper.gene_package(ship_id, package.x, package.y))
+            # track is_a package
+            track.status = "loaded"
+            track.save()
+            print(track)
         # update the pac_num of loaded truck, change status back to AW
-        print("569 update the pac_num of loaded truck " + str(all_loaded.truck_id))
+        print("598 update the pac_num of loaded truck " + str(all_loaded.truck_id))
         truck = md.Truck.objects.filter(truckid=all_loaded.truck_id).first()
         truck.status = "ARRIVE WAREHOUSE"
         truck.pac_num += len(pac_list)
         truck.save()
-        print("573 " + str(truck) + " saved")
+        print("603 " + str(truck) + " saved")
         # global seqnum atomically increase 
         # send Ucommands(UGoDeliver) to World
         seqnum_ = get_seqnum()
@@ -586,6 +610,14 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
             u_commands.deliveries.append(go_deliver)
             write_to_world(socket_to_world, u_commands)
             time.sleep(1)
+        # change truck & packages status to delivering after world handeled UGoDeliver
+        truck.status = "DELIVERING"
+        truck.save()
+        for package in all_loaded.packages:
+            ship_id = package.shipment_id
+            package_ = md.Package.objects.get(shipment_id=ship_id)
+            package_.status = "delivering"
+            package_.save()
         return
     except Exception as ex:
         print(ex)

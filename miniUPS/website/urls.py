@@ -15,7 +15,6 @@ urlpatterns = [
     path('logout/', views.logout, name='logout'),
     path('account/', views.account, name='account'),
     path('orders/', views.orders, name='orders'),
-    path('bind/', views.bind, name='bind')
     # path('account/package/', views.package_detail, name='package_detail'),
 ]
 

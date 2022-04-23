@@ -54,7 +54,7 @@ class Package(models.Model):
         blank=False, choices=status_options, max_length=128)
 
     def __str__(self):
-        return "tracking_id = " + str(self.tracking_id) + " ship_id = " + str(self.shipment_id) + " truckid = " + str(self.truckid) + " user = " + self.user + " status = " + self.status
+        return "tracking_id = " + str(self.tracking_id) + " ship_id = " + str(self.shipment_id) + " truckid = " + str(self.truckid) + " status = " + self.status
 
 
 class Item(models.Model):
@@ -71,7 +71,8 @@ class Item(models.Model):
 
 
 class AssignedTruck(models.Model):
-    whid = models.IntegerField(primary_key=True)
+    count = models.AutoField(primary_key=True)
+    whid = models.IntegerField(blank=False, null=False)
     truckid = models.ForeignKey(to=Truck, verbose_name="FK_truck",
                                 on_delete=models.CASCADE, default=None, blank=False, null=False)
 
