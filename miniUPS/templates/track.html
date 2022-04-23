@@ -29,7 +29,7 @@
             .timeline-steps .timeline-step:not(:last-child):after {
                 content: "";
                 display: block;
-                border-top: .25rem dotted #3b82f6;
+                border-top: .25rem dotted #ff4d4d;
                 width: 3.46rem;
                 position: absolute;
                 left: 7.5rem;
@@ -38,7 +38,7 @@
             .timeline-steps .timeline-step:not(:first-child):before {
                 content: "";
                 display: block;
-                border-top: .25rem dotted #3b82f6;
+                border-top: .25rem dotted #ff4d4d;
                 width: 3.8125rem;
                 position: absolute;
                 right: 7.5rem;
@@ -58,12 +58,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            background-color: #3b82f6
+            background-color: #ff4d4d
         }
 
         .timeline-steps .timeline-content .inner-circle:before {
             content: "";
-            background-color: #3b82f6;
+            background-color: #ff4d4d;
             display: inline-block;
             height: 3rem;
             width: 3rem;
@@ -139,15 +139,16 @@
                     {{message}}
                 </div>
             {% endif %}
-            {% if package.user != username%}
-                <form class="mx-1 mx-md-4 input-group" action="{% url 'website:track' %}" method="post">
+            {% if package.user == None%}
+                <form class="mx-1 mx-md-4 input-group" action="{% url 'website:track' id=package.tracking_id %}" method="post">
+                    {% csrf_token %}
                     <div class="d-grid gap-3 col-4 mx-auto">
-                        <button class="btn btn-primary" type="submit" >Bind this package</button>
+                        <button class="btn btn-outline-danger" type="submit" >Bind this package</button>
                     </div>
                 </form>
             {% else %}
                 <div class="d-grid gap-3 col-4 mx-auto">
-                    <button class="btn btn-primary" type="button" disabled>Bind this package</button>
+                    <button class="btn btn-outline-danger" type="button" disabled>Bind this package</button>
                 </div>
             {% endif %}
         </div>
