@@ -31,7 +31,7 @@ class Truck(models.Model):
     pac_num = models.IntegerField(null=False, default=0)
 
     def __str__(self):
-        return "truckid = " + str(self.truckid) + " status = " + self.status
+        return "truckid = " + str(self.truckid) + " status = " + self.status + " pac_num = " + str(self.pac_num)
 
 
 class Package(models.Model):
@@ -42,7 +42,7 @@ class Package(models.Model):
         ('delivering', 'delivering'),
         ('delivered', 'delivered')
     }
-    tracking_id = models.IntegerField(primary_key=True, serialize=True)
+    tracking_id = models.AutoField(primary_key=True)
     shipment_id = models.IntegerField(blank=False, unique=True)
     truckid = models.ForeignKey(to=Truck, verbose_name="FK_truck",
                                 on_delete=models.CASCADE, default=None, blank=False, null=False)
