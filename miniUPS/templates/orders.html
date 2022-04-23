@@ -108,9 +108,13 @@
                   <p class="fw-normal mb-1">{{package.x}}, {{package.y}}</p>
               </td>
               <td>
-              {% if package.status != 'delivered' and package.status != 'delivering' and package.status != 'loaded'%}
+              {% if package.status == 'in WH' or package.status == 'loading'%}
                   <button class="btn btn-outline-danger" type="submit" onclick="location.href='{% url 'website:change_dest' package_id=package.shipment_id truck_id=package.truckid.truckid%}'">
                     Change
+                  </button> 
+              {%elif package.status == 'delivered' %}
+                  <button class="btn btn-outline-danger" type="submit" onclick="location.href='{% url 'website:resend' package_id=package.shipment_id %}'">
+                    Resend
                   </button> 
               {%else%}
               <button class="btn btn-outline-danger" disabled>

@@ -1,5 +1,5 @@
 from email import message
-from socket import socket
+import socket
 from django.shortcuts import redirect, render, get_object_or_404
 from django.http import HttpResponse
 from . import forms
@@ -106,6 +106,15 @@ def logout(request):
         pass
     return redirect('/index')
 
+def resend(request, package_id):
+    msg = "resend," + str(package_id)
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect(('127.0.0.1', 8888))
+        client.send(msg.encode('utf-8'))
+    except:
+        error_message = 'lost connection to server!'
+    return redirect('/orders')
 
 def change_dest(request, package_id, truck_id):
     is_login = True
@@ -117,12 +126,16 @@ def change_dest(request, package_id, truck_id):
         if dest_form.is_valid():
             x = dest_form.cleaned_data['x']
             y = dest_form.cleaned_data['y']
-            msg = str(truck_id) + ',' + str(package_id) + \
-                ',' + str(x) + ',' + str(y) + '\n'
+            msg = "change" + str(truck_id) + ',' + str(package_id) + \
+                ',' + str(x) + ',' + str(y)
             # send the change dest addr requst to back end
-            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client.connect(('127.0.0.1', 8888))
-            client.send(msg.encode('utf-8'))
+            try:
+                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client.connect(('127.0.0.1', 8888))
+                client.send(msg.encode('utf-8'))
+            except:
+                error_message = 'lost connection to server!'
+                return redirect('/orders')
             return redirect('/orders')
     else:
         dest_form = forms.DestAddrForm()
