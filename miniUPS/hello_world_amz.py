@@ -1,5 +1,4 @@
 from django.conf import settings  # 将settings的内容引进
-# from django.core.mail import send_mail
 from django.core.mail import EmailMultiAlternatives  # 这样可以发送HTML格式的内容了
 import website.models as md
 from django.db.models import Q
@@ -20,8 +19,6 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
 if django.VERSION >= (1, 7):
     django.setup()
 
-# import pigeon
-
 
 executer = ThreadPoolExecutor(40)
 lock = threading.Lock()
@@ -38,6 +35,7 @@ def get_socket_to_amz():
     ip_port_amz = (ups_host, 54321)
     listen_to_amz = socket.socket()
     try:
+        listen_to_amz.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         listen_to_amz.bind(ip_port_amz)
         listen_to_amz.listen(5)
         socket_to_amz, address = listen_to_amz.accept()
@@ -54,6 +52,7 @@ def get_socket_to_world():
     ip_port_w = (world_host, 12345)
     socket_to_world = socket.socket()
     try:
+        socket_to_world.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         socket_to_world.connect(ip_port_w)
         print("connect to world" + "\n")
         return socket_to_world
@@ -72,16 +71,11 @@ def get_seqnum() -> int:
     return to_ret
 
 
-def get_world_id_from_input():
-    # ask user to reconnect or create a new world
-    return None
-
-
 def dock_amz(socket_to_world, socket_to_amz):
     print("dock to amz")
     count = 0
     while True:
-        print("recv from amz: " + str(count) + "\n")
+        print("recv from amz: " + str(count))
         count += 1
         au_msg, is_socket_closed = recv_from_amz(socket_to_amz)
         if is_socket_closed:
@@ -104,6 +98,24 @@ def dock_world(socket_to_world, socket_to_amz):
         executer.submit(handle_world, u_resp,
                         socket_to_world, socket_to_amz)
     print("dock world ends")
+
+
+def dock_frontend(socket_to_world, socket_to_amz):
+    try:
+        print("dock to frontend")
+        ip_port_frontend = ('127.0.0.1', 8888)
+        s_to_frontend = socket.socket()
+        s_to_frontend.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s_to_frontend.bind(ip_port_frontend)
+        s_to_frontend.listen(5)
+        while True:
+            frontend, _ = s_to_frontend.accept()
+            t = Thread(target=handle_frontend, args=(
+                frontend, socket_to_world, socket_to_amz))
+            t.setDaemon(True)
+            t.start()
+    except Exception as ex:
+        print(ex)
 
 
 """
@@ -205,8 +217,8 @@ def connect_to_word(truck_num, socket_to_world) -> bool:
     for i in range(truck_num):
         truck_to_add = msg.trucks.add()
         truck_to_add.id = i + 1
-        x_ = i
-        y_ = i
+        x_ = 0
+        y_ = 0
         truck_to_add.x = x_
         truck_to_add.y = y_
         id_to_pos.append([x_, y_])
@@ -464,9 +476,9 @@ def pick_truck(wh_id):
                 status='DELIVERING')).order_by('-status').first()
             print(truck)
             if truck:
-                print("the picked truck is:" + str(truck))
+                print("445 the picked truck is:" + str(truck))
                 # update truck status to Traveling
-                print("truck to update: " + str(truck))
+                print("447 truck to update: " + str(truck))
                 truck.status = 'TRAVELING'
                 truck.save()
                 print(str(truck) + " save successfully")
@@ -512,6 +524,8 @@ def w_a_pickup(truck_id, wh_id, pickup, socket_to_world, socket_to_amz):
         # insert into DB: AssignedTrucks
         truck, not_assigned = md.AssignedTruck.objects.get_or_create(
             whid=wh_id, truckid=md.Truck.objects.filter(truckid=truck_id).first())
+        # send pickup response to amazon
+        a_pickup(truck_id, pickup, socket_to_amz)
         # global seqnum atomically increase seqnum += 1
         seqnum_ = get_seqnum()
         go_pickup = None
@@ -519,14 +533,12 @@ def w_a_pickup(truck_id, wh_id, pickup, socket_to_world, socket_to_amz):
         if not_assigned:
             go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum_)
             print("468 send go_pickup = " + str(go_pickup))
-        # send pickup response to amazon
-        a_pickup(truck_id, pickup, socket_to_amz)
         # send UCommands(UGoPickup) to World
         if not_assigned:
+            u_commands = World_UPS.UCommands()
+            u_commands.pickups.append(go_pickup)
+            print("518 send to world: " + str(u_commands))
             while not is_acked(seqnum_):
-                u_commands = World_UPS.UCommands()
-                u_commands.pickups.append(go_pickup)
-                print("473 send to world: " + str(u_commands))
                 write_to_world(socket_to_world, u_commands)
                 time.sleep(1)
     except Exception as ex:
@@ -617,8 +629,9 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
                 item_ = md.Item.objects.create(
                     id=item.product_id, description=item.description, count=item.count, tracking_id=track)
                 print("581 inserted item: " + str(item))
+            # read pack's dest from db
             pac_list.append(PBwrapper.gene_package(
-                ship_id, package.x, package.y))
+                ship_id, track.x, track.y))
             # track is_a package
             track.status = "loaded"
             track.save()
@@ -635,9 +648,9 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
         seqnum_ = get_seqnum()
         go_deliver = PBwrapper.go_deliver(
             all_loaded.truck_id, pac_list, seqnum_)
+        u_commands = World_UPS.UCommands()
+        u_commands.deliveries.append(go_deliver)
         while not is_acked(seqnum_):
-            u_commands = World_UPS.UCommands()
-            u_commands.deliveries.append(go_deliver)
             write_to_world(socket_to_world, u_commands)
             time.sleep(1)
         # change truck & packages status to delivering after world handeled UGoDeliver
@@ -708,6 +721,42 @@ def a_worldid(socket_to_amz, worldid):
     return
 
 
+def handle_frontend(frontend, socket_to_world, socket_to_amz):
+    try:
+        while True:
+            data = frontend.recv(1024)
+            if len(data) <= 0:
+                frontend.close()
+                return
+            data = data.decode()
+            info = data.split(",")
+            print("710 recv from frontend: " + str(info))
+            if info[0] == "change":  # change,truckid,packageid,x,y
+                truck_id = int(info[1])
+                package_id = int(info[2])
+                x_ = int(info[3])
+                y_ = int(info[4])
+                pack = md.Package.objects.get(shipment_id=package_id)
+                if pack.status == "delivering" or pack.status == "dilivered":
+                    return
+                print("720 Pack to edit: " + str(720))
+                pack.x = x_
+                pack.y = y_
+                pack.save()
+                print(str(pack) + " saved")
+            elif info[0] == "resend":  # resend, ship_id
+                ship_id = int(info[1])
+                ua_msg = UA.UAmessage()
+                ua_msg.resend_package.shipment_id = ship_id
+                print("729 sent to amz: " + str(ua_msg))
+                write_to_amz(socket_to_amz, ua_msg)
+                pass
+            else:
+                print("I cannot understand")
+    except Exception as ex:
+        print(ex)
+
+
 def main():
     if len(sys.argv) < 3:
         print(
@@ -756,15 +805,19 @@ def main():
     socket_to_amz = get_socket_to_amz()
     # send the world_id to amz
     a_worldid(socket_to_amz, world_id)
-    # start one thread to dock amz
     try:
+        # start one thread to dock amz
         t_to_amz = Thread(target=dock_amz, args=(
             socket_to_world, socket_to_amz))
-
         # start one thread to dock world
         t_to_world = Thread(target=dock_world, args=(
             socket_to_world, socket_to_amz))
 
+        t_to_frontend = Thread(target=dock_frontend, args=(
+            socket_to_world, socket_to_amz))
+        t_to_frontend.setDaemon(True)
+        print("Is t_to_front set as Daemon? " + str(t_to_frontend.isDaemon()))
+        t_to_frontend.start()
         t_to_world.start()
         t_to_amz.start()
 
