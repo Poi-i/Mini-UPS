@@ -215,8 +215,8 @@ def connect_to_word(truck_num, socket_to_world) -> bool:
     for i in range(truck_num):
         truck_to_add = msg.trucks.add()
         truck_to_add.id = i + 1
-        x_ = i
-        y_ = i
+        x_ = 0
+        y_ = 0
         truck_to_add.x = x_
         truck_to_add.y = y_
         id_to_pos.append([x_, y_])
@@ -502,6 +502,8 @@ def w_a_pickup(truck_id, wh_id, pickup, socket_to_world, socket_to_amz):
         # insert into DB: AssignedTrucks
         truck, not_assigned = md.AssignedTruck.objects.get_or_create(
             whid=wh_id, truckid=md.Truck.objects.filter(truckid=truck_id).first())
+        # send pickup response to amazon
+        a_pickup(truck_id, pickup, socket_to_amz)
         # global seqnum atomically increase seqnum += 1
         seqnum_ = get_seqnum()
         go_pickup = None
@@ -509,8 +511,6 @@ def w_a_pickup(truck_id, wh_id, pickup, socket_to_world, socket_to_amz):
         if not_assigned:
             go_pickup = PBwrapper.go_pickup(truck_id, wh_id, seqnum_)
             print("468 send go_pickup = " + str(go_pickup))
-        # send pickup response to amazon
-        a_pickup(truck_id, pickup, socket_to_amz)
         # send UCommands(UGoPickup) to World
         if not_assigned:
             u_commands = World_UPS.UCommands()
