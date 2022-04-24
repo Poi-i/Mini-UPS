@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-68n3743#bxo045!87msjm#ognh=+6-w-s4cnd92@g_zoxx-*_#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["vcm-25953.vm.duke.edu",
+ALLOWED_HOSTS = ['web', "vcm-25953.vm.duke.edu",
                  "vcm-26474.vm.duke.edu", "127.0.0.1", "localhost"]
 CSRF_TRUSTED_ORIGINS = [
     'http://*.duke.edu',
@@ -42,7 +42,6 @@ CSRF_TRUSTED_ORIGINS = [
 
 INSTALLED_APPS = [
     'bootstrap5',
-    'bootstrap_datepicker_plus',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -127,7 +126,7 @@ TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
-USE_TZ = True
+# USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)

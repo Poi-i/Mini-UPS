@@ -4,21 +4,21 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
 if django.VERSION >= (1, 7):
     django.setup()
 
-from django.conf import settings  # 将settings的内容引进
-from django.core.mail import EmailMultiAlternatives  # 这样可以发送HTML格式的内容了
-import website.models as md
-from django.db.models import Q
-import PBwrapper
-from protos import UA_pb2 as UA
-from protos import world_ups_pb2 as World_UPS
-from google.protobuf.internal.encoder import _EncodeVarint
-from google.protobuf.internal.decoder import _DecodeVarint32
-import time
-import threading
-from threading import Thread
-import socket
-from concurrent.futures import ThreadPoolExecutor
 import sys
+from concurrent.futures import ThreadPoolExecutor
+import socket
+from threading import Thread
+import threading
+import time
+from google.protobuf.internal.decoder import _DecodeVarint32
+from google.protobuf.internal.encoder import _EncodeVarint
+from protos import world_ups_pb2 as World_UPS
+from protos import UA_pb2 as UA
+import PBwrapper
+from django.db.models import Q
+import website.models as md
+from django.core.mail import EmailMultiAlternatives  # 这样可以发送HTML格式的内容了
+from django.conf import settings  # 将settings的内容引进
 
 
 
@@ -33,8 +33,8 @@ world_id = None
 
 
 def get_socket_to_amz():
-    ups_host = '127.0.0.1'
-    ip_port_amz = (ups_host, 54321)
+    ups_host = '0.0.0.0'
+    ip_port_amz = (ups_host, 55555)
     listen_to_amz = socket.socket()
     try:
         listen_to_amz.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -50,7 +50,7 @@ def get_socket_to_amz():
 
 
 def get_socket_to_world():
-    world_host = 'vcm-26474.vm.duke.edu'
+    world_host = 'vcm-25953.vm.duke.edu'
     ip_port_w = (world_host, 12345)
     socket_to_world = socket.socket()
     try:
@@ -191,10 +191,12 @@ def recv_from_world(to_world_socket):
     world_res = World_UPS.UResponses()
     try:
         world_res.ParseFromString(whole_message)
-        print("recv from world: " + str(world_res) + "\n")
+        print("------------------- recv from world -------------------")
+        print(str(world_res))
+
         return world_res, False
     except:
-        print("Error parsing message from world\n")
+        print("------------------- Error parsing message from world -------------------")
         return None, False
 
 
@@ -205,7 +207,8 @@ def recv_from_amz(socket_to_amazom) -> UA.AUmessage:
     au_msg = UA.AUmessage()
     try:
         au_msg.ParseFromString(whole_message)
-        print("recv from amz: " + str(au_msg) + "\n")
+        print("-------------------recv from amz -------------------" )
+        print(str(au_msg))
         return au_msg, False
     except:
         print("Error parsing message from amz\n")
@@ -227,7 +230,8 @@ def connect_to_word(truck_num, socket_to_world) -> bool:
     msg.isAmazon = False
     write_msg(socket_to_world, msg)  # no need for repeat
     uconnected_str, _ = recv_msg(socket_to_world)
-    print("receive from world: " + str(uconnected_str) + "\n")
+    print("------------------- recv from world -------------------")
+    print(str(uconnected_str))
     uconnected = World_UPS.UConnected()
     uconnected.ParseFromString(uconnected_str)
     print("world id: " + str(uconnected.worldid))
@@ -385,7 +389,7 @@ def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
         # send mail to user
         flag = not package.user
         flag_ = not flag
-        print("386 package has user "+ str(flag_))
+        print("386 package has user " + str(flag_))
         if package.user:
             print("389 user exists calling send_email()")
             send_mail(package.user.email)
