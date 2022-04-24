@@ -173,5 +173,3 @@ def account(request):
     delivered_pac = md.Package.objects.filter(
         user=user.username).filter(status="delivered").count()
     return render(request, 'account.html', locals())
-# def package_detail(request):
-#     return

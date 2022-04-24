@@ -1,9 +1,5 @@
-import django
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
-if django.VERSION >= (1, 7):
-    django.setup()
-
+from django.conf import settings  # 将settings的内容引进
+from django.core.mail import EmailMultiAlternatives  # 这样可以发送HTML格式的内容了
 import website.models as md
 from django.db.models import Q
 import PBwrapper
@@ -17,8 +13,11 @@ from threading import Thread
 import socket
 from concurrent.futures import ThreadPoolExecutor
 import sys
-
-
+import django
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
+if django.VERSION >= (1, 7):
+    django.setup()
 
 
 executer = ThreadPoolExecutor(40)
@@ -71,6 +70,7 @@ def get_seqnum() -> int:
     lock.release()
     return to_ret
 
+
 def dock_amz(socket_to_world, socket_to_amz):
     print("dock to amz")
     count = 0
@@ -110,11 +110,13 @@ def dock_frontend(socket_to_world, socket_to_amz):
         s_to_frontend.listen(5)
         while True:
             frontend, _ = s_to_frontend.accept()
-            t = Thread(target=handle_frontend, args=(frontend, socket_to_world, socket_to_amz))
+            t = Thread(target=handle_frontend, args=(
+                frontend, socket_to_world, socket_to_amz))
             t.setDaemon(True)
             t.start()
     except Exception as ex:
         print(ex)
+
 
 """
 Helper function for writing, write msg to socket_
@@ -341,6 +343,23 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
         except Exception as ex:
             print(ex)
 
+# send mail to user when package delivered
+
+
+def send_mail(username):
+    user = md.User.objects.filter(username=username).first
+    subject = 'Your package has been delivered!'
+    # text_content = 'Your package has been delivered! Please go to the pick up loaction on time.'
+    html_content = '''
+    <p>Woo hoo! Your package has been delivered. Please go to the pick-up loaction on time.</p >
+    <p>Enjoy with your </p >
+    '''
+    from_email = settings.DEFAULT_FROM_EMAIL
+    to = user.email  # to = '', '', ''   可接多个邮箱地址
+    msg = EmailMultiAlternatives(subject, html_content, from_email, to)
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()
+
 
 def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
     try:
@@ -358,6 +377,9 @@ def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
         package.status = "delivered"
         package.save()
         print(str(package) + " saved")
+
+        # send mail to user
+        send_mail(package.user.username)
 
         # update truck's pac_num
         truck = md.Truck.objects.filter(truckid=truck_id).first()
@@ -709,10 +731,10 @@ def handle_frontend(frontend, socket_to_world, socket_to_amz):
             data = data.decode()
             info = data.split(",")
             print("710 recv from frontend: " + str(info))
-            if info[0] == "change": # change,truckid,packageid,x,y
+            if info[0] == "change":  # change,truckid,packageid,x,y
                 truck_id = int(info[1])
                 package_id = int(info[2])
-                x_= int(info[3])
+                x_ = int(info[3])
                 y_ = int(info[4])
                 pack = md.Package.objects.get(shipment_id=package_id)
                 if pack.status == "delivering" or pack.status == "dilivered":
@@ -722,7 +744,7 @@ def handle_frontend(frontend, socket_to_world, socket_to_amz):
                 pack.y = y_
                 pack.save()
                 print(str(pack) + " saved")
-            elif info[0] == "resend": # resend,ship_id
+            elif info[0] == "resend":  # resend, ship_id
                 ship_id = int(info[1])
                 ua_msg = UA.UAmessage()
                 ua_msg.resend_package.shipment_id = ship_id
@@ -733,6 +755,7 @@ def handle_frontend(frontend, socket_to_world, socket_to_amz):
                 print("I cannot understand")
     except Exception as ex:
         print(ex)
+
 
 def main():
     if len(sys.argv) < 3:
@@ -789,7 +812,7 @@ def main():
         # start one thread to dock world
         t_to_world = Thread(target=dock_world, args=(
             socket_to_world, socket_to_amz))
-        
+
         t_to_frontend = Thread(target=dock_frontend, args=(
             socket_to_world, socket_to_amz))
         t_to_frontend.setDaemon(True)
