@@ -1,3 +1,9 @@
+import django
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
+if django.VERSION >= (1, 7):
+    django.setup()
+
 from django.conf import settings  # 将settings的内容引进
 from django.core.mail import EmailMultiAlternatives  # 这样可以发送HTML格式的内容了
 import website.models as md
@@ -13,11 +19,6 @@ from threading import Thread
 import socket
 from concurrent.futures import ThreadPoolExecutor
 import sys
-import django
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "miniUPS.settings")
-if django.VERSION >= (1, 7):
-    django.setup()
 
 
 executer = ThreadPoolExecutor(40)
