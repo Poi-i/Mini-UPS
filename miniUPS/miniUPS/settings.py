@@ -29,13 +29,12 @@ DEBUG = True
 ALLOWED_HOSTS = ["vcm-25953.vm.duke.edu",
                  "vcm-26474.vm.duke.edu", "127.0.0.1", "localhost"]
 CSRF_TRUSTED_ORIGINS = [
-    'http://vcm-25953.vm.duke.edu',
-    'http://vcm-25953.vm.duke.edu:8000',
-    'http://vcm-26474.vm.duke.edu',
-    'http://vcm-26474.vm.duke.edu:8000',
+    'http://*.duke.edu',
+    'http://*.duke.edu:8000',
     'http://localhost',
     'http://localhost:8000',
-    'http://localhost:8001'
+    'http://127.0.0.1:8000',
+    'http://127.0.0.1'
 ]
 
 
@@ -142,3 +141,13 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Email related configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # 邮箱服务器
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = not EMAIL_USE_SSL  # 跟EMAIL_USE_SSL是互斥的，只有一个是True
+EMAIL_PORT = 465  # TLS-587
+EMAIL_HOST_USER = 'bowan224@gmail.com'
+EMAIL_HOST_PASSWORD = 'vtpbgkptljdsiieh'  # 授权码
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
