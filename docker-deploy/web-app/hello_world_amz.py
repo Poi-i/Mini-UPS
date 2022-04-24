@@ -476,7 +476,6 @@ def handle_world(u_rsp: World_UPS.UResponses, socket_to_world, socket_to_amz):
 def pick_truck(wh_id):
     print("start to select truck")
     # avoid race condition on picking the same truck
-    lock.acquire()
     while True:
         try:
             # check whether already exist truck on the way to the WH
@@ -502,8 +501,6 @@ def pick_truck(wh_id):
                 continue
         except Exception as ex:
             print(ex)
-        finally:
-            lock.release()
 
 
 '''
@@ -608,7 +605,9 @@ def handle_amz_pickup(pickup: UA.APacPickup, socket_to_world, socket_to_amz):
     print("528 received APacPickup = " + str(pickup))
     wh_id = pickup.whid
     # pick an idle or delivering truck to pickup
+    lock.acquire()
     truck_id = pick_truck(wh_id)
+    lock.release()
 
     # World part
     w_a_pickup(truck_id, wh_id, pickup, socket_to_world, socket_to_amz)
@@ -656,17 +655,10 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
         truck.pac_num += len(pac_list)
         truck.save()
         print("603 " + str(truck) + " saved")
-        # global seqnum atomically increase
-        # send Ucommands(UGoDeliver) to World
-        seqnum_ = get_seqnum()
-        go_deliver = PBwrapper.go_deliver(
-            all_loaded.truck_id, pac_list, seqnum_)
-        u_commands = World_UPS.UCommands()
-        u_commands.deliveries.append(go_deliver)
-        while not is_acked(seqnum_):
-            write_to_world(socket_to_world, u_commands)
-            time.sleep(1)
+        
+        
         # change truck & packages status to delivering after world handeled UGoDeliver
+        print("658 packs " + str(ship_id) + " loaded, set packs & truck to delivering")
         truck.status = "DELIVERING"
         truck.save()
         for package in all_loaded.packages:
@@ -674,7 +666,18 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
             package_ = md.Package.objects.get(shipment_id=ship_id)
             package_.status = "delivering"
             package_.save()
-        return
+        seqnum_ = get_seqnum()
+        go_deliver = PBwrapper.go_deliver(
+            all_loaded.truck_id, pac_list, seqnum_)
+        u_commands = World_UPS.UCommands()
+        u_commands.deliveries.append(go_deliver)
+
+        # global seqnum atomically increase
+        # send Ucommands(UGoDeliver) to World
+        while not is_acked(seqnum_):
+            write_to_world(socket_to_world, u_commands)
+            time.sleep(1)
+        
     except Exception as ex:
         print(ex)
 
