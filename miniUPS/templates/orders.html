@@ -112,17 +112,11 @@
                   <button class="btn btn-outline-danger" type="submit" onclick="location.href='{% url 'website:change_dest' package_id=package.shipment_id truck_id=package.truckid.truckid%}'">
                     Change
                   </button> 
-<<<<<<< HEAD
-              {% elif package.status == 'delivered' %}
-                  
-              {% else %}
-=======
               {%elif package.status == 'delivered' %}
                   <button class="btn btn-outline-danger" type="submit" onclick="location.href='{% url 'website:resend' package_id=package.shipment_id %}'">
                     Resend
                   </button> 
               {%else%}
->>>>>>> 103cbcd423be37eb69ed8a2e134639d2fc65d174
               <button class="btn btn-outline-danger" disabled>
                 Change
               </button>

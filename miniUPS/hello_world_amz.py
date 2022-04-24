@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor
 import sys
 
 
+
 executer = ThreadPoolExecutor(40)
 lock = threading.Lock()
 lock_socket_world = threading.Lock()
@@ -347,8 +348,9 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
 # send mail to user when package delivered
 
 
-def send_mail(username):
-    user = md.User.objects.filter(username=username).first
+def send_mail(email):
+    # user = md.User.objects.filter(email=email).first()
+    print("353 send email to " + email)
     subject = 'Your package has been delivered!'
     # text_content = 'Your package has been delivered! Please go to the pick up loaction on time.'
     html_content = '''
@@ -356,7 +358,8 @@ def send_mail(username):
     <p>Enjoy with your </p >
     '''
     from_email = settings.DEFAULT_FROM_EMAIL
-    to = user.email  # to = '', '', ''   可接多个邮箱地址
+    to = []
+    to.append(email)  # to = '', '', ''   可接多个邮箱地址
     msg = EmailMultiAlternatives(subject, html_content, from_email, to)
     msg.attach_alternative(html_content, "text/html")
     msg.send()
@@ -380,7 +383,12 @@ def handle_world_delievered(u_delivery_made, socket_to_world, socket_to_amz):
         print(str(package) + " saved")
 
         # send mail to user
-        send_mail(package.user.username)
+        flag = not package.user
+        flag_ = not flag
+        print("386 package has user "+ str(flag_))
+        if package.user:
+            print("389 user exists calling send_email()")
+            send_mail(package.user.email)
 
         # update truck's pac_num
         truck = md.Truck.objects.filter(truckid=truck_id).first()
