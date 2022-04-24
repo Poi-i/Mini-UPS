@@ -126,7 +126,7 @@ def change_dest(request, package_id, truck_id):
         if dest_form.is_valid():
             x = dest_form.cleaned_data['x']
             y = dest_form.cleaned_data['y']
-            msg = "change" + str(truck_id) + ',' + str(package_id) + \
+            msg = "change," + str(truck_id) + ',' + str(package_id) + \
                 ',' + str(x) + ',' + str(y)
             # send the change dest addr requst to back end
             try:

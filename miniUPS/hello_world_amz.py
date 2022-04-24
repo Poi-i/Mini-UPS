@@ -541,8 +541,8 @@ def a_pickup(truck_id, pickup: UA.APacPickup, socket_to_amz):
         package.y = pickup.y
         package.status = 'in WH'
         package.save()
-        print()
         # update package with username if valid
+        is_binded = False
         if pickup.HasField("ups_username"):
             is_binded = verify_user(pickup.ups_username, package)
         pac_pickup_res = PBwrapper.pac_pickup_res(
@@ -722,7 +722,7 @@ def handle_frontend(frontend, socket_to_world, socket_to_amz):
                 pack.y = y_
                 pack.save()
                 print(str(pack) + " saved")
-            elif info[0] == "resend": # resend, ship_id
+            elif info[0] == "resend": # resend,ship_id
                 ship_id = int(info[1])
                 ua_msg = UA.UAmessage()
                 ua_msg.resend_package.shipment_id = ship_id
