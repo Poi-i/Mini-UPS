@@ -23,7 +23,8 @@ services:
       volumes:
         - ./web-app:/code
       ports: 
-        - "55555:55555"
+        - "55555:55555" #ports for amazon
+        - "8888:8888" #ports for front end
       depends_on:
         - web-init
   web:

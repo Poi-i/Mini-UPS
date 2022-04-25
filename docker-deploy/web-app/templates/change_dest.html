@@ -69,6 +69,11 @@
       </nav>
     </header>
     <div class="container py-5 h-100">
+        {% if error_message %}
+            <div class="alert alert-primary" data-dismiss="alert">
+                {{error_message}}
+            </div>
+            {% endif %}
     {% comment %} action="{% url 'website:change_dest' %}" {% endcomment %}
         <form method="post">
             {% csrf_token %}

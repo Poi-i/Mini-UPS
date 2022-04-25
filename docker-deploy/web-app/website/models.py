@@ -58,7 +58,7 @@ class Package(models.Model):
 
 
 class Item(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     description = models.CharField(blank=False, max_length=128)
     count = models.IntegerField(blank=False)
     tracking_id = models.ForeignKey(to=Package, verbose_name="FK_Package",

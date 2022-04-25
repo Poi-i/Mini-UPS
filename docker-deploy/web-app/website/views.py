@@ -107,11 +107,12 @@ def logout(request):
     return redirect('/index')
 
 def resend(request, package_id):
-    msg = "resend," + str(package_id)
+    msg = "resend, " + str(package_id)
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect(('127.0.0.1', 8888))
+        client.connect(('server', 8888))
         client.send(msg.encode('utf-8'))
+        print(msg)
     except:
         error_message = 'lost connection to server!'
     return redirect('/orders')
@@ -124,18 +125,22 @@ def change_dest(request, package_id, truck_id):
     if request.method == 'POST':
         dest_form = forms.DestAddrForm(request.POST)
         if dest_form.is_valid():
-            x = dest_form.cleaned_data['x']
-            y = dest_form.cleaned_data['y']
-            msg = "change," + str(truck_id) + ',' + str(package_id) + \
-                ',' + str(x) + ',' + str(y)
-            # send the change dest addr requst to back end
-            try:
-                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client.connect(('127.0.0.1', 8888))
-                client.send(msg.encode('utf-8'))
-            except:
-                error_message = 'lost connection to server!'
-                return redirect('/orders')
+            truck = md.Truck.objects.filter(truckid=truck_id)
+            if truck.status == 'loading' or truck.status == 'in WH':
+                x = dest_form.cleaned_data['x']
+                y = dest_form.cleaned_data['y']
+                msg = "change," + str(truck_id) + ',' + str(package_id) + \
+                    ',' + str(x) + ',' + str(y)
+                # send the change dest addr requst to back end
+                try:
+                    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    client.connect(('server', 8888))
+                    client.send(msg.encode('utf-8'))
+                    print("change destination: " + str(x) +' ,' + str(y))
+                except:
+                    error_message = 'lost connection to server!'
+                    # return redirect('/orders')
+                    return render(request, 'change_dest.html', locals())
             return redirect('/orders')
     else:
         dest_form = forms.DestAddrForm()

@@ -105,7 +105,7 @@ def dock_world(socket_to_world, socket_to_amz):
 def dock_frontend(socket_to_world, socket_to_amz):
     try:
         print("dock to frontend")
-        ip_port_frontend = ('127.0.0.1', 8888)
+        ip_port_frontend = ('0.0.0.0', 8888)
         s_to_frontend = socket.socket()
         s_to_frontend.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s_to_frontend.bind(ip_port_frontend)
@@ -114,7 +114,7 @@ def dock_frontend(socket_to_world, socket_to_amz):
             frontend, _ = s_to_frontend.accept()
             t = Thread(target=handle_frontend, args=(
                 frontend, socket_to_world, socket_to_amz))
-            t.setDaemon(True)
+            # t.setDaemon(True)
             t.start()
     except Exception as ex:
         print(ex)
@@ -329,6 +329,8 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
     truck.save()
     if truck_status == "ARRIVE WAREHOUSE":
         try:
+            # delete truck from Assigned Truck
+            assigned_truck = md.AssignedTruck.objects.get(truckid = truck).delete()
             # tell amz truck has arrived
             send_arrive = PBwrapper.send_arrive(
                 truck_id_, u_finished.x, u_finished.y)
@@ -342,6 +344,7 @@ def handle_world_finished(u_finished, socket_to_world, socket_to_amz):
             truck.save()
             packages = md.Package.objects.filter(
                 truckid=truck.truckid).filter(status="in WH")
+            
             if packages:
                 for package in packages:
                     package.status = "loading"
@@ -639,7 +642,7 @@ def handle_amz_all_loaded(all_loaded: UA.ASendAllLoaded, socket_to_world, socket
                 print("563 process item: " + str(item))
                 # insert into fProduct
                 item_ = md.Item.objects.create(
-                    id=item.product_id, description=item.description, count=item.count, tracking_id=track)
+                    description=item.description, count=item.count, tracking_id=track)
                 print("581 inserted item: " + str(item))
             # read pack's dest from db
             pac_list.append(PBwrapper.gene_package(
@@ -831,11 +834,12 @@ def main():
 
         t_to_frontend = Thread(target=dock_frontend, args=(
             socket_to_world, socket_to_amz))
-        t_to_frontend.setDaemon(True)
-        print("Is t_to_front set as Daemon? " + str(t_to_frontend.isDaemon()))
-        t_to_frontend.start()
+        # t_to_frontend.setDaemon(True)
+        # print("Is t_to_front set as Daemon? " + str(t_to_frontend.isDaemon()))
         t_to_world.start()
         t_to_amz.start()
+        t_to_frontend.start()
+        
 
     finally:
         t_to_world.join()
