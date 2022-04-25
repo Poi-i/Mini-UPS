@@ -17,7 +17,7 @@ services:
         - ./web-app:/code
       depends_on:
         - db
-  server:
+  web-server:
       build: ./web-app
       command: /code/runclient.sh
       volumes:
@@ -36,7 +36,7 @@ services:
       expose:
         - "8000"
       depends_on:
-        - server
+        - web-server
   nginx:
      image: nginx:latest
      ports:

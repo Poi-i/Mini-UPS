@@ -110,7 +110,7 @@ def resend(request, package_id):
     msg = "resend, " + str(package_id)
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect(('server', 8888))
+        client.connect(('web-server', 8888))
         client.send(msg.encode('utf-8'))
         print(msg)
     except:
@@ -134,7 +134,7 @@ def change_dest(request, package_id, truck_id):
                 # send the change dest addr requst to back end
                 try:
                     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    client.connect(('server', 8888))
+                    client.connect(('web-server', 8888))
                     client.send(msg.encode('utf-8'))
                     print("change destination: " + str(x) +' ,' + str(y))
                 except:
