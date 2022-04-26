@@ -139,7 +139,7 @@
                     {{message}}
                 </div>
             {% endif %}
-            {% if package.user == None%}
+            {% if package.user == None and is_login == True%}
                 <form class="mx-1 mx-md-4 input-group" action="{% url 'website:track' id=package.tracking_id %}" method="post">
                     {% csrf_token %}
                     <div class="d-grid gap-3 col-4 mx-auto">

@@ -125,8 +125,8 @@ def change_dest(request, package_id, truck_id):
     if request.method == 'POST':
         dest_form = forms.DestAddrForm(request.POST)
         if dest_form.is_valid():
-            truck = md.Truck.objects.filter(truckid=truck_id)
-            if truck.status == 'loading' or truck.status == 'in WH':
+            package = md.Package.objects.filter(shipment_id=package_id).first()
+            if package.status == 'loading' or package.status == 'in WH':
                 x = dest_form.cleaned_data['x']
                 y = dest_form.cleaned_data['y']
                 msg = "change," + str(truck_id) + ',' + str(package_id) + \
