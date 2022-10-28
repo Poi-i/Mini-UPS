@@ -8,8 +8,8 @@ Google Protocol Buffer is used to communicate with world-simulator and mini amaz
 author: Boyi Wang, Qiheng Gao
 
 ## Feature checklist(requirement)
-• The	ability	to	enter	a	tracking	number	and	see	the	status of	the	shipment.	
-• User accounts	(with	user ids	and	passwords).	If	you	are	logged	in,	you	should	be	able	to	do	the	
+* The	ability	to	enter	a	tracking	number	and	see	the	status of	the	shipment.	
+* User accounts	(with	user ids	and	passwords).	If	you	are	logged	in,	you	should	be	able	to	do	the	
 following	to	packages	you	own	(your	user	id	was	supplied	to	Amazon	when	the	purchase	was	
 made):	
   * See	a	list	of	all	packages	that	belong	to	them.	
